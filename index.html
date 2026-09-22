@@ -3,22 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TTS Kinematika - SMAN 1 Batudaa Pantai</title>
+    <title>TTS Kinematika 2D - Adaptif</title>
     <style>
         :root {
-            --bg-color: #0f172a; /* Biru Dongker Gelap */
-            --board-bg: #1e293b; /* Biru Dongker Papan */
-            --primary: #0284c7;  /* Biru Utama */
-            --primary-light: #38bdf8; /* Biru Muda */
+            /* Tema Biru Dongker & Biru Muda */
+            --bg-dark: #0f172a; 
+            --bg-panel: rgba(30, 41, 59, 0.85);
+            --primary: #0284c7;  
+            --primary-light: #38bdf8; 
             --text-light: #f8fafc;
             --cell-bg: #ffffff;
             --cell-text: #0f172a;
             --cell-border: #94a3b8;
-            --highlight-word: #bae6fd; /* Biru Muda Highlight Kata */
-            --highlight-cell: #fde047; /* Kuning Terang Highlight Sel Aktif */
-            --solved-bg: #a7f3d0; /* Hijau Sukses */
+            --highlight-word: #bae6fd; 
+            --highlight-cell: #fde047; 
+            --solved-bg: #a7f3d0; 
+            --solved-text: #064e3b;
             
-            --cell-size: 45px; /* Sedikit diperbesar agar mudah ditap di layar sentuh */
+            --cell-size: 40px; 
         }
 
         * {
@@ -31,7 +33,8 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
+            background-color: var(--bg-dark);
+            background-image: radial-gradient(circle at 50% -20%, #1e3a8a, var(--bg-dark));
             color: var(--text-light);
             width: 100vw;
             height: 100vh;
@@ -41,28 +44,34 @@
         }
 
         header {
-            background: rgba(2, 132, 199, 0.9);
-            backdrop-filter: blur(10px);
-            padding: 15px 20px;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(15px);
+            padding: 15px 25px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            border-bottom: 1px solid rgba(56, 189, 248, 0.3);
             z-index: 20;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
         }
 
-        .header-title { font-size: 1.4rem; font-weight: bold; color: white; }
-        .header-score { font-size: 1.2rem; font-weight: bold; background: rgba(255,255,255,0.2); padding: 5px 15px; border-radius: 20px; }
+        .header-title { font-size: 1.5rem; font-weight: bold; color: var(--primary-light); text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        .header-score { font-size: 1.1rem; font-weight: bold; background: rgba(56, 189, 248, 0.2); padding: 8px 18px; border-radius: 20px; border: 1px solid rgba(56, 189, 248, 0.3); }
 
-        /* BUG FIX: Scroll native yang super mulus tanpa blokir klik */
-        main {
+        .layout-container {
+            display: flex;
             flex: 1;
-            overflow: auto; /* Memungkinkan scroll native */
-            -webkit-overflow-scrolling: touch; /* Momentum scrolling di iOS/Touchscreen */
-            background-color: var(--board-bg);
+            overflow: hidden;
+            flex-direction: row; /* Default PC: Berdampingan */
+        }
+
+        .board-section {
+            flex: 2;
+            overflow: auto; /* Scrolling bawaan peramban */
+            -webkit-overflow-scrolling: touch;
             position: relative;
-            padding: 40px; /* Jarak aman di sekeliling papan */
+            padding: 50px;
+            background-color: transparent;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -70,9 +79,9 @@
 
         #grid-board {
             position: relative;
-            /* Lebar dan tinggi akan diset dinamis via JS */
-            background: rgba(255,255,255,0.02);
-            border-radius: 8px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.3);
         }
 
         .cell {
@@ -85,78 +94,97 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 24px;
-            font-weight: bold;
+            font-size: 20px;
+            font-weight: 800;
             text-transform: uppercase;
             cursor: pointer;
-            border-radius: 4px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            transition: all 0.1s ease;
+            border-radius: 6px;
+            transition: all 0.15s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
 
         .cell-number {
             position: absolute;
             top: 2px;
-            left: 4px;
-            font-size: 11px;
+            left: 3px;
+            font-size: 10px;
             color: #475569;
             font-weight: bold;
         }
 
-        /* Status Kotak (Aktif, Terselesaikan) */
         .cell.word-active { background-color: var(--highlight-word); border-color: var(--primary); }
         .cell.cell-active { 
             background-color: var(--highlight-cell); 
             border-color: #ca8a04; 
-            box-shadow: inset 0 0 0 3px #ca8a04; 
+            box-shadow: inset 0 0 0 3px #ca8a04, 0 4px 10px rgba(0,0,0,0.4); 
             z-index: 5; 
-            transform: scale(1.05);
+            transform: scale(1.1);
         }
-        .cell.solved { background-color: var(--solved-bg); border-color: #059669; color: #064e3b; }
+        .cell.solved { background-color: var(--solved-bg); border-color: #059669; color: var(--solved-text); }
         
-        #bottom-panel {
-            background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(10px);
-            border-top: 2px solid var(--primary);
-            padding: 15px 10px 20px 10px;
+        .panel-section {
+            flex: 1;
+            min-width: 350px;
+            max-width: 450px;
+            background: var(--bg-panel);
+            backdrop-filter: blur(20px);
+            border-left: 1px solid rgba(56, 189, 248, 0.2);
+            padding: 20px;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            z-index: 20;
-            box-shadow: 0 -4px 15px rgba(0,0,0,0.5);
+            box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+            z-index: 10;
+            overflow-y: auto;
         }
 
-        #active-clue-box {
-            width: 100%;
-            max-width: 900px;
-            background: rgba(30, 41, 59, 0.8);
-            border: 1px solid var(--primary-light);
+        .clue-container {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--primary);
             border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
             text-align: center;
-            min-height: 80px;
+            min-height: 120px;
             display: flex;
             flex-direction: column;
             justify-content: center;
         }
 
-        #clue-direction { font-size: 0.9rem; color: var(--primary-light); font-weight: bold; margin-bottom: 5px; letter-spacing: 1px;}
-        #clue-text { font-size: 1.15rem; color: white; line-height: 1.4; }
+        #clue-direction { font-size: 0.95rem; color: var(--primary-light); font-weight: bold; margin-bottom: 8px; letter-spacing: 1.5px; text-transform: uppercase;}
+        #clue-text { font-size: 1.2rem; color: white; line-height: 1.5; }
 
-        #keyboard { width: 100%; max-width: 900px; }
-        .kb-row { display: flex; justify-content: center; gap: 6px; margin-bottom: 8px; }
+        /* Tombol Cek Jawaban */
+        .btn-check {
+            background: linear-gradient(135deg, #059669, #10b981);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .btn-check:active { transform: translateY(3px); box-shadow: none; }
+        .btn-check:disabled { background: #475569; color: #94a3b8; cursor: not-allowed; box-shadow: none; }
+
+        #keyboard { width: 100%; display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
+        .kb-row { display: flex; justify-content: center; gap: 6px; }
         
         .kb-key {
-            background: linear-gradient(180deg, #475569, #334155);
+            background: linear-gradient(180deg, #334155, #1e293b);
             color: white;
-            border: 1px solid #64748b;
+            border: 1px solid #475569;
             border-radius: 8px;
-            padding: 15px 0;
+            padding: 16px 0;
             flex: 1;
-            max-width: 70px;
+            max-width: 60px;
             text-align: center;
-            font-size: 1.3rem;
+            font-size: 1.2rem;
             font-weight: bold;
             cursor: pointer;
             box-shadow: 0 4px 0 #0f172a;
@@ -164,9 +192,18 @@
         }
         
         .kb-key:active { transform: translateY(4px); box-shadow: 0 0 0 #0f172a; background: var(--primary); border-color: var(--primary-light); }
-        .kb-key.action-key { max-width: 130px; background: linear-gradient(180deg, #ef4444, #dc2626); box-shadow: 0 4px 0 #7f1d1d; border-color: #fca5a5; font-size: 1.1rem; }
-        .kb-key.action-key:active { background: #b91c1c; box-shadow: 0 0 0 #7f1d1d; }
+        .kb-key.action-key { max-width: 100px; background: linear-gradient(180deg, #ef4444, #b91c1c); box-shadow: 0 4px 0 #7f1d1d; border-color: #fca5a5; font-size: 1rem; }
+        .kb-key.action-key:active { background: #991b1b; box-shadow: 0 0 0 #7f1d1d; }
 
+        /* Animasi Salah */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .shake-err { animation: shake 0.3s ease-in-out; border-color: #ef4444 !important; background-color: #fee2e2 !important; }
+
+        /* Overlay Loading & Menang */
         .overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(15, 23, 42, 0.95);
@@ -181,18 +218,25 @@
             text-align: center; border: 4px solid var(--primary);
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
-        .btn {
-            background-color: var(--primary); color: white; border: none;
-            padding: 12px 25px; border-radius: 8px; font-size: 1.2rem; font-weight: bold;
-            margin-top: 20px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-        }
-        .btn:active { transform: translateY(2px); box-shadow: none; }
 
-        @media (max-width: 768px) {
-            .header-title { font-size: 1.1rem; }
-            .kb-key { padding: 12px 0; font-size: 1.2rem; }
-            .kb-key.action-key { font-size: 1rem; }
-            :root { --cell-size: 38px; }
+        @media (max-width: 800px) {
+            .layout-container { flex-direction: column; }
+            .board-section { flex: 1; padding: 20px; }
+            .panel-section { 
+                flex: none; 
+                max-width: 100%; 
+                border-left: none; 
+                border-top: 1px solid rgba(56, 189, 248, 0.3); 
+                padding: 15px; 
+                border-radius: 20px 20px 0 0; 
+                box-shadow: 0 -10px 30px rgba(0,0,0,0.5); 
+            }
+            .clue-container { min-height: 80px; padding: 15px; margin-bottom: 15px; }
+            #clue-text { font-size: 1.05rem; }
+            .btn-check { padding: 12px; font-size: 1rem; margin-bottom: 15px; }
+            .kb-key { padding: 12px 0; font-size: 1.1rem; }
+            :root { --cell-size: 34px; }
+            .header-title { font-size: 1.2rem; }
         }
     </style>
 </head>
@@ -205,99 +249,104 @@
         <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
     </div>
 
-    <!-- Header Informasi -->
+    <!-- Header -->
     <header>
-        <div class="header-title">TTS Kinematika - SMAN 1 Batudaa Pantai</div>
+        <div class="header-title">Fisika: Kinematika</div>
         <div class="header-score">Selesai: <span id="score-display">0</span> / 35</div>
     </header>
 
-    <!-- Kontainer Papan Grid dengan Native Scroll -->
-    <main id="main-area">
-        <div id="grid-board">
-            <!-- Sel TTS akan dimuat oleh JavaScript -->
-        </div>
-    </main>
-
-    <!-- Panel Petunjuk dan Keyboard -->
-    <div id="bottom-panel">
-        <div id="active-clue-box">
-            <div id="clue-direction">-</div>
-            <div id="clue-text">Ketuk salah satu kotak putih pada papan di atas untuk mulai menjawab. Anda dapat menggeser papan ke kiri/kanan/atas/bawah.</div>
-        </div>
+    <!-- Kontainer Utama -->
+    <div class="layout-container">
         
-        <div id="keyboard">
-            <div class="kb-row">
-                <div class="kb-key" onclick="typeKey('Q')">Q</div><div class="kb-key" onclick="typeKey('W')">W</div><div class="kb-key" onclick="typeKey('E')">E</div><div class="kb-key" onclick="typeKey('R')">R</div><div class="kb-key" onclick="typeKey('T')">T</div><div class="kb-key" onclick="typeKey('Y')">Y</div><div class="kb-key" onclick="typeKey('U')">U</div><div class="kb-key" onclick="typeKey('I')">I</div><div class="kb-key" onclick="typeKey('O')">O</div><div class="kb-key" onclick="typeKey('P')">P</div>
+        <!-- Kiri / Atas: Papan TTS -->
+        <section class="board-section" id="main-area">
+            <div id="grid-board"></div>
+        </section>
+
+        <!-- Kanan / Bawah: Panel Kontrol -->
+        <section class="panel-section">
+            <div class="clue-container">
+                <div id="clue-direction">PETUNJUK PENGGUNAAN</div>
+                <div id="clue-text">Ketuk salah satu kotak putih di papan. Ketik jawaban, lalu tekan tombol "Cek Jawaban" di bawah ini. (Bisa menggunakan Keyboard Laptop)</div>
             </div>
-            <div class="kb-row">
-                <div class="kb-key" onclick="typeKey('A')">A</div><div class="kb-key" onclick="typeKey('S')">S</div><div class="kb-key" onclick="typeKey('D')">D</div><div class="kb-key" onclick="typeKey('F')">F</div><div class="kb-key" onclick="typeKey('G')">G</div><div class="kb-key" onclick="typeKey('H')">H</div><div class="kb-key" onclick="typeKey('J')">J</div><div class="kb-key" onclick="typeKey('K')">K</div><div class="kb-key" onclick="typeKey('L')">L</div>
+
+            <button class="btn-check" id="btn-check" onclick="verifyAnswer()" disabled>✓ Cek Jawaban (Enter)</button>
+
+            <!-- Virtual Keyboard -->
+            <div id="keyboard">
+                <div class="kb-row">
+                    <div class="kb-key" onclick="typeKey('Q')">Q</div><div class="kb-key" onclick="typeKey('W')">W</div><div class="kb-key" onclick="typeKey('E')">E</div><div class="kb-key" onclick="typeKey('R')">R</div><div class="kb-key" onclick="typeKey('T')">T</div><div class="kb-key" onclick="typeKey('Y')">Y</div><div class="kb-key" onclick="typeKey('U')">U</div><div class="kb-key" onclick="typeKey('I')">I</div><div class="kb-key" onclick="typeKey('O')">O</div><div class="kb-key" onclick="typeKey('P')">P</div>
+                </div>
+                <div class="kb-row">
+                    <div class="kb-key" onclick="typeKey('A')">A</div><div class="kb-key" onclick="typeKey('S')">S</div><div class="kb-key" onclick="typeKey('D')">D</div><div class="kb-key" onclick="typeKey('F')">F</div><div class="kb-key" onclick="typeKey('G')">G</div><div class="kb-key" onclick="typeKey('H')">H</div><div class="kb-key" onclick="typeKey('J')">J</div><div class="kb-key" onclick="typeKey('K')">K</div><div class="kb-key" onclick="typeKey('L')">L</div>
+                </div>
+                <div class="kb-row">
+                    <div class="kb-key action-key" onclick="deleteKey()">⌫ HAPUS</div>
+                    <div class="kb-key" onclick="typeKey('Z')">Z</div><div class="kb-key" onclick="typeKey('X')">X</div><div class="kb-key" onclick="typeKey('C')">C</div><div class="kb-key" onclick="typeKey('V')">V</div><div class="kb-key" onclick="typeKey('B')">B</div><div class="kb-key" onclick="typeKey('N')">N</div><div class="kb-key" onclick="typeKey('M')">M</div>
+                </div>
             </div>
-            <div class="kb-row">
-                <div class="kb-key action-key" onclick="deleteKey()">⌫ HAPUS</div>
-                <div class="kb-key" onclick="typeKey('Z')">Z</div><div class="kb-key" onclick="typeKey('X')">X</div><div class="kb-key" onclick="typeKey('C')">C</div><div class="kb-key" onclick="typeKey('V')">V</div><div class="kb-key" onclick="typeKey('B')">B</div><div class="kb-key" onclick="typeKey('N')">N</div><div class="kb-key" onclick="typeKey('M')">M</div>
-            </div>
-        </div>
+        </section>
+
     </div>
 
     <!-- Modal Kemenangan -->
     <div id="win-modal" class="overlay">
         <div class="modal-box">
             <h1 style="color: #059669; font-size: 2.5rem; margin-bottom: 15px;">Misi Selesai! 🎉</h1>
-            <p style="font-size: 1.2rem; margin-bottom: 10px;">Anda telah menguasai seluruh konsep dasar Kinematika.</p>
+            <p style="font-size: 1.2rem; margin-bottom: 10px;">Anda telah menuntaskan seluruh 35 kata kunci Kinematika.</p>
             <p style="font-weight: bold; color: var(--primary); font-size:1.1rem; padding: 15px; background:#f1f5f9; border-radius:8px;">Silakan lapor kepada Pak Guru Iskandar.</p>
-            <button class="btn" onclick="location.reload()">Main Ulang</button>
+            <button class="btn-check" style="margin-top: 20px; width: 100%;" onclick="location.reload()">Main Ulang</button>
         </div>
     </div>
 
     <script>
         const wordList = [
             // MENDATAR (15)
-            { w: 'PERPINDAHAN', c: 'Jarak lurus dari posisi awal ke akhir', d: 'H' },
-            { w: 'JARAK', c: 'Panjang total lintasan yang ditempuh', d: 'H' },
-            { w: 'KELAJUAN', c: 'Jarak yang ditempuh dibagi waktu (skalar)', d: 'H' },
-            { w: 'KECEPATAN', c: 'Perpindahan dibagi selang waktu (vektor)', d: 'H' },
-            { w: 'PERCEPATAN', c: 'Perubahan kecepatan tiap satuan waktu', d: 'H' },
-            { w: 'WAKTU', c: 'Besaran skalar yang diukur dengan stopwatch', d: 'H' },
-            { w: 'POSISI', c: 'Letak suatu benda pada titik acuan tertentu', d: 'H' },
-            { w: 'VEKTOR', c: 'Besaran yang memiliki nilai dan arah', d: 'H' },
-            { w: 'SKALAR', c: 'Besaran yang hanya memiliki nilai', d: 'H' },
-            { w: 'LINTASAN', c: 'Titik-titik berurutan yang dilalui benda', d: 'H' },
-            { w: 'RELATIF', c: 'Gerak yang bergantung pada titik acuan', d: 'H' },
-            { w: 'GRAFIK', c: 'Visualisasi data posisi terhadap waktu pada sumbu koordinat', d: 'H' },
-            { w: 'GERAK', c: 'Perubahan posisi benda terhadap acuan', d: 'H' },
-            { w: 'PARABOLA', c: 'Bentuk lintasan peluru', d: 'H' },
-            { w: 'JATUHBEBAS', c: 'Gerak benda ke bawah akibat gravitasi tanpa kecepatan awal', d: 'H' },
+            { w: 'PERPINDAHAN', c: 'Jarak terpendek dari posisi awal ke akhir', d: 'H' },
+            { w: 'JARAK', c: 'Panjang total lintasan yang ditempuh benda', d: 'H' },
+            { w: 'KELAJUAN', c: 'Besaran skalar: jarak dibagi waktu tempuh', d: 'H' },
+            { w: 'KECEPATAN', c: 'Besaran vektor: perpindahan dibagi waktu', d: 'H' },
+            { w: 'PERCEPATAN', c: 'Perubahan kecepatan dalam selang waktu tertentu', d: 'H' },
+            { w: 'WAKTU', c: 'Besaran yang diukur menggunakan stopwatch', d: 'H' },
+            { w: 'POSISI', c: 'Kedudukan suatu benda terhadap titik acuan', d: 'H' },
+            { w: 'VEKTOR', c: 'Besaran fisis yang memiliki arah dan nilai', d: 'H' },
+            { w: 'SKALAR', c: 'Besaran fisis yang hanya memiliki nilai (tanpa arah)', d: 'H' },
+            { w: 'LINTASAN', c: 'Garis yang dilalui oleh benda yang bergerak', d: 'H' },
+            { w: 'RELATIF', c: 'Sifat gerak yang sangat bergantung pada pengamat', d: 'H' },
+            { w: 'GRAFIK', c: 'Bentuk penyajian visual hubungan v-t atau s-t', d: 'H' },
+            { w: 'GERAK', c: 'Keadaan benda yang posisinya berubah terhadap acuan', d: 'H' },
+            { w: 'PARABOLA', c: 'Bentuk lintasan gerak peluru', d: 'H' },
+            { w: 'JATUHBEBAS', c: 'Gerak benda vertikal ke bawah tanpa kecepatan awal', d: 'H' },
 
             // MENURUN (20)
-            { w: 'KINEMATIKA', c: 'Ilmu gerak tanpa memperhatikan penyebabnya', d: 'V' },
+            { w: 'KINEMATIKA', c: 'Ilmu fisika yang meninjau gerak tanpa melihat penyebabnya', d: 'V' },
             { w: 'DINAMIKA', c: 'Ilmu gerak yang memperhatikan gaya penyebabnya', d: 'V' },
-            { w: 'METER', c: 'Satuan SI untuk jarak dan perpindahan', d: 'V' },
-            { w: 'DETIK', c: 'Satuan SI untuk waktu', d: 'V' },
-            { w: 'KONSTAN', c: 'Nilai yang tidak berubah atau tetap', d: 'V' },
-            { w: 'RATA', c: 'Kecepatan total dibagi waktu total (Kecepatan ____-____ )', d: 'V' },
-            { w: 'SESAAT', c: 'Kecepatan pada waktu tertentu yang sangat singkat', d: 'V' },
+            { w: 'METER', c: 'Satuan Internasional (SI) untuk besaran perpindahan', d: 'V' },
+            { w: 'DETIK', c: 'Satuan Internasional (SI) untuk besaran waktu', d: 'V' },
+            { w: 'KONSTAN', c: 'Kecepatan pada Gerak Lurus Beraturan (GLB) bernilai...', d: 'V' },
+            { w: 'RATA', c: 'Perpindahan total dibagi selang waktu total (Kecepatan ____-____)', d: 'V' },
+            { w: 'SESAAT', c: 'Kecepatan benda pada suatu titik waktu tertentu', d: 'V' },
             { w: 'LURUS', c: 'Bentuk lintasan pada GLB dan GLBB', d: 'V' },
-            { w: 'GRAVITASI', c: 'Percepatan yang menarik benda ke pusat bumi', d: 'V' },
-            { w: 'VERTIKAL', c: 'Gerak lurus ke atas atau ke bawah', d: 'V' },
-            { w: 'HORIZONTAL', c: 'Arah gerak sejajar dengan sumbu x', d: 'V' },
-            { w: 'AWAL', c: 'Kecepatan sebelum benda mengalami percepatan', d: 'V' },
-            { w: 'AKHIR', c: 'Kecepatan setelah benda mengalami percepatan', d: 'V' },
-            { w: 'PERLAMBATAN', c: 'Percepatan yang bernilai negatif', d: 'V' },
-            { w: 'SUDUT', c: 'Besaran yang memengaruhi jarak terjauh pada gerak parabola', d: 'V' },
-            { w: 'PROYEKTIL', c: 'Benda yang diluncurkan ke udara', d: 'V' },
-            { w: 'MAKSIMUM', c: 'Titik tertinggi yang dicapai peluru', d: 'V' },
-            { w: 'MINIMUM', c: 'Nilai terendah', d: 'V' },
-            { w: 'DIAM', c: 'Kondisi benda saat kecepatannya nol', d: 'V' },
-            { w: 'ARAH', c: 'Sifat yang membedakan kecepatan dan kelajuan', d: 'V' }
+            { w: 'GRAVITASI', c: 'Percepatan yang bernilai sekitar 9,8 m/s²', d: 'V' },
+            { w: 'VERTIKAL', c: 'Arah gerak pada sumbu Y', d: 'V' },
+            { w: 'HORIZONTAL', c: 'Arah gerak pada sumbu X', d: 'V' },
+            { w: 'AWAL', c: 'Kecepatan mula-mula benda (v0)', d: 'V' },
+            { w: 'AKHIR', c: 'Kecepatan benda setelah detik ke-t (vt)', d: 'V' },
+            { w: 'PERLAMBATAN', c: 'Istilah untuk percepatan yang nilainya negatif', d: 'V' },
+            { w: 'SUDUT', c: 'Besaran elevasi yang memengaruhi tinggi maksimum peluru', d: 'V' },
+            { w: 'PROYEKTIL', c: 'Nama lain dari benda yang mengalami gerak parabola', d: 'V' },
+            { w: 'MAKSIMUM', c: 'Titik puncak tertinggi yang bisa dicapai', d: 'V' },
+            { w: 'MINIMUM', c: 'Titik terendah (kebalikan dari maksimum)', d: 'V' },
+            { w: 'DIAM', c: 'Kondisi benda saat kelajuannya adalah nol', d: 'V' },
+            { w: 'ARAH', c: 'Perbedaan utama antara kecepatan (vektor) dan kelajuan (skalar) adalah pada...', d: 'V' }
         ];
 
-        const GRID_MAX = 70; // Kanvas besar untuk menampung banyak persilangan
+        const GRID_MAX = 70; 
         let grid = Array.from({length: GRID_MAX}, () => Array(GRID_MAX).fill(null));
         let placedWords = [];
         let currentNum = 1;
 
         function buildCrossword() {
-            // Sortir kata: dahulukan yang terpanjang agar menjadi tulang punggung grid
             let words = [...wordList].sort((a, b) => b.w.length - a.w.length);
             
             for (let i = 0; i < words.length; i++) {
@@ -306,7 +355,6 @@
                 let prefDir = words[i].d;
                 
                 if (placedWords.length === 0) {
-                    // Letakkan kata pertama tepat di tengah grid
                     let sx = Math.floor(GRID_MAX / 2) - Math.floor(wordText.length / 2);
                     let sy = Math.floor(GRID_MAX / 2);
                     placeWord(wordText, wordClue, sx, sy, prefDir);
@@ -315,12 +363,9 @@
                     if (bestFit) {
                         placeWord(wordText, wordClue, bestFit.x, bestFit.y, bestFit.dir, bestFit.sharedLabel);
                     } else {
-                        // Jika tidak ada huruf bersilangan, letakkan berjejer di area bawah yang kosong
                         let emptyFit = findEmptySpace(wordText, prefDir);
                         if (emptyFit) {
                             placeWord(wordText, wordClue, emptyFit.x, emptyFit.y, emptyFit.dir);
-                        } else {
-                            console.warn("Gagal menempatkan:", wordText); // Pengaman fallback
                         }
                     }
                 }
@@ -334,7 +379,6 @@
                 for (let y = 0; y < GRID_MAX; y++) {
                     for (let x = 0; x < GRID_MAX; x++) {
                         if (grid[y][x] && grid[y][x].char === char) {
-                            // Coba pasang sesuai preferred direction (Mendatar/Menurun)
                             if (prefDir === 'H') {
                                 let hX = x - i;
                                 if (isValid(wordText, hX, y, 'H')) {
@@ -351,7 +395,6 @@
                 }
             }
             if (options.length > 0) {
-                // Pilih posisi yang memiliki persilangan paling banyak tanpa tabrakan
                 options.sort((a,b) => b.score - a.score);
                 return options[0];
             }
@@ -359,7 +402,6 @@
         }
 
         function findEmptySpace(wordText, dir) {
-            // Cari dari bawah ke atas agar kotak terpusat di tengah-bawah
             for (let y = GRID_MAX - wordText.length - 2; y > 2; y -= 2) {
                 for (let x = 2; x < GRID_MAX - wordText.length - 2; x += 2) {
                     if (isValid(wordText, x, y, dir)) return { x, y, dir };
@@ -379,17 +421,14 @@
                 let cy = startY + (i * dy);
                 let currentCell = grid[cy][cx];
 
-                // Jika sudah terisi, hurufnya harus persis sama
                 if (currentCell) {
                     if (currentCell.char !== text[i]) return false;
                 } else {
-                    // Cek selang-seling (tetangga kiri-kanan / atas-bawah harus kosong untuk cegah kata bersatu)
                     let pX = dy, pY = dx; 
                     if (grid[cy + pY] && grid[cy + pY][cx + pX] !== null) return false;
                     if (grid[cy - pY] && grid[cy - pY][cx - pX] !== null) return false;
                 }
             }
-            // Mencegah kata menyambung di depan atau di belakang
             if (grid[startY - dy] && grid[startY - dy][startX - dx] !== null) return false;
             let endX = startX + (text.length * dx), endY = startY + (text.length * dy);
             if (grid[endY] && grid[endY][endX] !== null) return false;
@@ -441,13 +480,12 @@
         }
 
         const boardEl = document.getElementById('grid-board');
+        const btnCheck = document.getElementById('btn-check');
         let cellSizeStyle;
 
         function renderDOM() {
-            // Evaluasi ukuran sel dari CSS root
             cellSizeStyle = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cell-size').trim());
 
-            // Cari batas terluar area yang terisi agar tidak terlalu banyak ruang kosong
             let minX = GRID_MAX, maxX = 0, minY = GRID_MAX, maxY = 0;
             for (let y = 0; y < GRID_MAX; y++) {
                 for (let x = 0; x < GRID_MAX; x++) {
@@ -458,7 +496,6 @@
                 }
             }
 
-            // Margin ekstra
             minX = Math.max(0, minX - 1); maxX = Math.min(GRID_MAX - 1, maxX + 1);
             minY = Math.max(0, minY - 1); maxY = Math.min(GRID_MAX - 1, maxY + 1);
 
@@ -487,7 +524,6 @@
                         let textEl = document.createElement('span');
                         cEl.appendChild(textEl);
                         
-                        // EVENT KLIK LANGSUNG DI ELEMEN CELL (Dijamin berfungsi karena tidak ada blokir drag)
                         cEl.addEventListener('click', () => selectCell(cData));
 
                         boardEl.appendChild(cEl);
@@ -499,7 +535,6 @@
 
             document.getElementById('loading').classList.remove('show');
             
-            // Pusatkan scroll ke tengah papan secara perlahan
             setTimeout(() => {
                 const mainArea = document.getElementById('main-area');
                 mainArea.scrollTop = (bh - mainArea.clientHeight) / 2;
@@ -512,24 +547,21 @@
         let totalScore = 0;
 
         function selectCell(cData) {
-            // Jika sel berada di kata yang sudah terjawab semua, abaikan klik
             if (cData.words.every(w => w.solved)) return;
 
             clearHighlights();
 
             let tWord = cData.words[0];
             
-            // Logika persimpangan: ganti arah jika diklik lagi
             if (cData.words.length > 1) {
                 if (activeWord === cData.words[0] && activeCell === cData) {
-                    tWord = cData.words[1]; // Toggle arah (mendatar -> menurun)
+                    tWord = cData.words[1]; 
                 } else if (activeWord === cData.words[1] && activeCell === cData) {
                     tWord = cData.words[0];
                 } else if (!activeWord || (activeWord !== cData.words[0] && activeWord !== cData.words[1])) {
-                    // Prioritaskan arah kata yang belum terjawab
                     tWord = cData.words[0].solved ? cData.words[1] : cData.words[0];
                 } else {
-                    tWord = activeWord; // Tetap di arah yang sedang diketik
+                    tWord = activeWord; 
                 }
             }
 
@@ -541,21 +573,24 @@
             activeWord = tWord;
             activeCell = cData;
 
-            // Warnai kotak yang se-kata
             activeWord.cells.forEach(c => {
                 if (!c.words.every(w => w.solved)) c.el.classList.add('word-active');
             });
             activeCell.el.classList.add('cell-active');
 
-            // Tampilkan petunjuk
             let dText = activeWord.dir === 'H' ? 'MENDATAR' : 'MENURUN';
             document.getElementById('clue-direction').innerText = `${activeWord.num}. ${dText}`;
             document.getElementById('clue-text').innerText = activeWord.clue;
+            
+            btnCheck.disabled = false; // Aktifkan tombol cek
+            
+            // Auto-scroll ke posisi sel di mobile
+            activeCell.el.scrollIntoView({behavior: "smooth", block: "center", inline: "center"});
         }
 
         function clearHighlights() {
             document.querySelectorAll('.cell').forEach(el => {
-                el.classList.remove('word-active', 'cell-active');
+                el.classList.remove('word-active', 'cell-active', 'shake-err');
             });
         }
 
@@ -565,22 +600,15 @@
             activeCell.userInput = letter;
             activeCell.textEl.innerText = letter;
 
-            checkWinCondition();
-
-            // Pindah otomatis ke kotak berikutnya dalam 1 kata
-            if (!activeWord.solved) {
-                let idx = activeWord.cells.indexOf(activeCell);
-                if (idx < activeWord.cells.length - 1) {
-                    let nCell = activeWord.cells[idx + 1];
-                    // Loncat kotak jika kotak depannya sudah diselesaikan oleh persimpangan kata lain
-                    if (!nCell.words.every(w => w.solved)) {
-                        activeCell.el.classList.remove('cell-active');
-                        activeCell = nCell;
-                        activeCell.el.classList.add('cell-active');
-                        
-                        // Auto scroll ke sel yang baru aktif jika keluar dari viewport
-                        activeCell.el.scrollIntoView({behavior: "smooth", block: "center", inline: "center"});
-                    }
+            // Pindah kotak
+            let idx = activeWord.cells.indexOf(activeCell);
+            if (idx < activeWord.cells.length - 1) {
+                let nCell = activeWord.cells[idx + 1];
+                if (!nCell.words.every(w => w.solved)) {
+                    activeCell.el.classList.remove('cell-active');
+                    activeCell = nCell;
+                    activeCell.el.classList.add('cell-active');
+                    activeCell.el.scrollIntoView({behavior: "smooth", block: "nearest", inline: "center"});
                 }
             }
         }
@@ -596,7 +624,6 @@
             } else if (idx > 0) {
                 activeCell.el.classList.remove('cell-active');
                 
-                // Cari kotak mundur yang belum dikunci persimpangan
                 let pIdx = idx - 1;
                 while (pIdx >= 0 && activeWord.cells[pIdx].words.some(w => w.solved && w !== activeWord)) {
                     pIdx--;
@@ -607,26 +634,56 @@
                     activeCell.userInput = '';
                     activeCell.textEl.innerText = '';
                     activeCell.el.classList.add('cell-active');
+                    activeCell.el.scrollIntoView({behavior: "smooth", block: "nearest", inline: "center"});
                 } else {
                     activeCell.el.classList.add('cell-active');
                 }
             }
         }
 
-        function checkWinCondition() {
+        document.addEventListener('keydown', (e) => {
+            if (!activeWord || activeWord.solved) return;
+            
+            // Jika user menekan huruf A-Z
+            if (/^[a-zA-Z]$/.test(e.key)) {
+                typeKey(e.key.toUpperCase());
+            } 
+            // Backspace
+            else if (e.key === 'Backspace') {
+                deleteKey();
+            }
+            // Enter untuk Cek Jawaban
+            else if (e.key === 'Enter') {
+                verifyAnswer();
+            }
+            // Arah panah (opsional untuk ubah arah)
+            else if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault(); // Mencegah layar ter-scroll oleh tombol panah
+            }
+        });
+
+        function verifyAnswer() {
+            if (!activeWord || activeWord.solved) return;
+
             let isCorrect = true;
+            let cellsToCheck = [];
+
+            // Periksa setiap sel dalam kata yang aktif
             for (let i = 0; i < activeWord.cells.length; i++) {
                 let c = activeWord.cells[i];
                 let val = c.userInput;
+                
+                // Jika kosong tapi sudah terjawab oleh persilangan sebelumnya
                 if (val === '' && c.words.some(w => w.solved)) val = c.char; 
 
                 if (val !== c.char) {
                     isCorrect = false;
-                    break;
+                    cellsToCheck.push(c);
                 }
             }
 
             if (isCorrect) {
+                // Jawaban Benar
                 activeWord.solved = true;
                 totalScore++;
                 document.getElementById('score-display').innerText = totalScore;
@@ -635,27 +692,52 @@
                     c.el.classList.remove('word-active', 'cell-active');
                     c.el.classList.add('solved');
                     c.textEl.innerText = c.char;
+                    c.userInput = c.char; // Kunci jawaban
                 });
 
                 document.getElementById('clue-direction').innerText = "BENAR! ✓";
-                document.getElementById('clue-text').innerText = "Silakan pilih kotak/petunjuk yang lain.";
+                document.getElementById('clue-text').innerText = "Kerja bagus! Silakan pilih kotak/petunjuk yang lain.";
+                btnCheck.disabled = true;
                 activeWord = null;
                 activeCell = null;
 
+                // Cek menang
                 if (totalScore === placedWords.length) {
                     setTimeout(() => document.getElementById('win-modal').classList.add('show'), 800);
+                }
+            } else {
+                // Jawaban Salah: Berikan efek getar (shake) pada kotak yang salah
+                cellsToCheck.forEach(c => {
+                    if(!c.words.some(w => w.solved)){
+                        c.el.classList.remove('shake-err');
+                        void c.el.offsetWidth; // Trigger reflow untuk mengulang animasi
+                        c.el.classList.add('shake-err');
+                        
+                        // Hapus input yang salah secara otomatis
+                        c.userInput = '';
+                        c.textEl.innerText = '';
+                    }
+                });
+
+                document.getElementById('clue-direction').innerText = "❌ BELUM TEPAT";
+                
+                // Kembalikan sel aktif ke sel kosong pertama pada kata ini
+                let firstEmptyIdx = activeWord.cells.findIndex(c => c.userInput === '' && !c.words.some(w => w.solved));
+                if(firstEmptyIdx !== -1) {
+                    activeCell.el.classList.remove('cell-active');
+                    activeCell = activeWord.cells[firstEmptyIdx];
+                    activeCell.el.classList.add('cell-active');
                 }
             }
         }
 
-        // Jalankan Generator
+        // Mulai Game
         window.onload = () => {
             setTimeout(() => {
                 buildCrossword();
                 renderDOM();
-            }, 500); // Sedikit jeda agar UI terender sebelum beban algoritma
+            }, 600);
         };
-
     </script>
 </body>
 </html>
