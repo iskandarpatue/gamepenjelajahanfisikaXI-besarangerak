@@ -14,10 +14,9 @@
             margin: 0;
             overflow: hidden;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            touch-action: none; /* Mencegah layar ter-scroll di HP */
+            touch-action: none; 
         }
         
-        /* UI Overlay */
         #ui-layer {
             position: absolute;
             top: 0;
@@ -86,19 +85,6 @@
         }
         .btn-option:hover { background: rgba(56, 189, 248, 0.3); }
         
-        #crosshair {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 20px;
-            height: 20px;
-            transform: translate(-50%, -50%);
-            border: 2px solid rgba(255,255,255,0.5);
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 5;
-        }
-        
         .hud {
             position: absolute;
             top: 20px;
@@ -112,7 +98,6 @@
             z-index: 5;
         }
 
-        /* Virtual Joystick Styles */
         #joystick-zone {
             position: absolute;
             bottom: 30px;
@@ -141,7 +126,6 @@
         }
     </style>
 
-    <!-- Komponen Kustom untuk Joystick Virtual -->
     <script>
         AFRAME.registerComponent('virtual-joystick', {
             schema: { speed: { default: 4 } },
@@ -157,7 +141,7 @@
                     let dx = x - centerX;
                     let dy = y - centerY;
                     
-                    const maxDist = rect.width / 2 - 25; // 25 is half of knob size
+                    const maxDist = rect.width / 2 - 25; 
                     const dist = Math.sqrt(dx*dx + dy*dy);
                     
                     if (dist > maxDist) {
@@ -170,6 +154,7 @@
                 };
 
                 zone.addEventListener('touchstart', (e) => {
+                    e.stopPropagation(); // Mencegah tap di joystick terbaca sebagai klik peti
                     this.isActive = true;
                     const touch = e.touches[0];
                     handleMove(touch.clientX, touch.clientY, zone.getBoundingClientRect());
@@ -178,11 +163,13 @@
                 zone.addEventListener('touchmove', (e) => {
                     if (!this.isActive) return;
                     e.preventDefault();
+                    e.stopPropagation();
                     const touch = e.touches[0];
                     handleMove(touch.clientX, touch.clientY, zone.getBoundingClientRect());
                 });
 
-                const resetJoystick = () => {
+                const resetJoystick = (e) => {
+                    if(e) e.stopPropagation();
                     this.isActive = false;
                     this.knob.style.transform = `translate(0px, 0px)`;
                     this.joystickData = { x: 0, y: 0 };
@@ -197,13 +184,11 @@
                 
                 const cameraEl = this.el.querySelector('[camera]');
                 const rotation = cameraEl.getAttribute('rotation');
-                // Konversi rotasi Y kamera ke radian
                 const yaw = THREE.MathUtils.degToRad(rotation.y);
                 
                 const z = this.joystickData.y;
                 const x = this.joystickData.x;
                 
-                // Menghitung arah maju/mundur dan kiri/kanan berdasarkan arah kamera
                 const dx = (x * Math.cos(yaw) + z * Math.sin(yaw)) * this.data.speed * (dt / 1000);
                 const dz = (z * Math.cos(yaw) - x * Math.sin(yaw)) * this.data.speed * (dt / 1000);
                 
@@ -216,7 +201,6 @@
 <body>
 
     <div class="hud" id="score-display">Peti Ditemukan: 0 / 3</div>
-    <div id="crosshair"></div>
 
     <!-- Joystick UI untuk Mobile -->
     <div id="joystick-zone">
@@ -229,8 +213,8 @@
         <!-- Intro Modal -->
         <div id="intro-modal" class="modal" style="display: block;">
             <h2>Misi Penjelajah Waktu ⚓</h2>
-            <p style="text-align: center;">Selamat datang, Navigator SMAN 1 Batudaa Pantai! Untuk menemukan Harta Karun legendaris, Anda harus memecahkan 3 teka-teki Kinematika yang tersebar di pulau ini.</p>
-            <p style="text-align: center; font-size: 0.9rem; color: #cbd5e1;"><b>PC/Laptop:</b> Gunakan W, A, S, D untuk berjalan.<br><b>HP:</b> Gunakan Joystick di pojok kiri bawah.<br>Klik Peti Harta Karun untuk membuka soal.</p>
+            <p style="text-align: center;">Selamat datang, Navigator SMAN 1 Batudaa Pantai! Untuk menemukan Harta Karun legendaris, pecahkan 3 teka-teki Kinematika di pulau ini.</p>
+            <p style="text-align: center; font-size: 0.9rem; color: #cbd5e1;"><b>PC/Laptop:</b> Gunakan W, A, S, D untuk berjalan.<br><b>HP:</b> Gunakan Joystick di pojok kiri bawah.<br><br><b>Cara Buka Peti:</b> Arahkan lingkaran biru di tengah layar ke peti, lalu <b>klik / tap layar!</b></p>
             <button class="btn" onclick="closeModal('intro-modal')">Mulai Ekspedisi</button>
         </div>
 
@@ -292,14 +276,22 @@
     </div>
 
     <!-- 3D Scene -->
-    <a-scene cursor="rayOrigin: mouse" raycaster="objects: .clickable">
-        
-        <!-- Environment (Ocean/Island theme) -->
+    <a-scene>
+        <!-- Environment -->
         <a-entity environment="preset: contact; skyColor: #87CEEB; groundColor: #2E8B57; groundTexture: walkernoise"></a-entity>
 
-        <!-- Player Rig (Mendukung Joystick & WASD) -->
+        <!-- Player Rig dengan Kursor 3D Terintegrasi -->
         <a-entity id="player-rig" position="0 0 0" virtual-joystick>
-            <a-entity camera look-controls wasd-controls="acceleration: 30" position="0 1.6 0"></a-entity>
+            <a-entity camera look-controls wasd-controls="acceleration: 30" position="0 1.6 0">
+                <!-- Kursor 3D tepat di tengah lensa kamera -->
+                <a-entity cursor="fuse: false"
+                          position="0 0 -1"
+                          geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
+                          material="color: #38bdf8; shader: flat; opacity: 0.8"
+                          raycaster="objects: .clickable"
+                          animation__click="property: scale; startEvents: click; easing: easeInCubic; dur: 150; from: 0.5 0.5 0.5; to: 1 1 1">
+                </a-entity>
+            </a-entity>
         </a-entity>
 
         <!-- Peti Harta Karun 1 -->
@@ -329,8 +321,6 @@
     </a-scene>
 
     <script>
-        let currentChest = 1;
-
         // Interaction Listeners
         document.querySelector('#chest1').addEventListener('click', () => openModal('q1-modal'));
         document.querySelector('#chest2').addEventListener('click', () => openModal('q2-modal'));
@@ -338,24 +328,27 @@
 
         function openModal(id) {
             document.getElementById(id).style.display = 'block';
-            document.getElementById('joystick-zone').style.display = 'none'; // Sembunyikan joystick saat ada modal
+            document.getElementById('joystick-zone').style.display = 'none'; // Sembunyikan joystick
         }
 
         function closeModal(id) {
             document.getElementById(id).style.display = 'none';
-            document.getElementById('joystick-zone').style.display = 'flex'; // Munculkan joystick lagi
+            document.getElementById('joystick-zone').style.display = 'flex'; // Munculkan joystick
         }
 
         function checkAnswer(questionNumber, isCorrect) {
             if (isCorrect) {
                 alert("Jawaban Benar! Anda mendapatkan koordinat untuk peti selanjutnya.");
                 closeModal(`q${questionNumber}-modal`);
+                
+                // Hapus peti yang sudah dijawab
                 document.querySelector(`#chest${questionNumber}`).setAttribute('visible', 'false');
                 document.querySelector(`#chest${questionNumber}`).classList.remove('clickable');
                 
                 document.getElementById('score-display').innerText = `Peti Ditemukan: ${questionNumber} / 3`;
 
                 if (questionNumber < 3) {
+                    // Munculkan peti berikutnya
                     let nextChest = document.querySelector(`#chest${questionNumber + 1}`);
                     nextChest.setAttribute('visible', 'true');
                     nextChest.classList.add('clickable');
