@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Misi Harta Karun Kinematika - Fisika Kelas XI</title>
+    <!-- A-Frame VR Library -->
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <!-- A-Frame Environment Component for elegant 3D background -->
+    <script src="https://unpkg.com/aframe-environment-component@1.3.3/dist/aframe-environment-component.min.js"></script>
+    
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        /* UI Overlay menggunakan desain Glassmorphism yang elegan */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+        .modal {
+            pointer-events: auto;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 2.5rem;
+            border-radius: 20px;
+            color: #f8fafc;
+            display: none;
+            max-width: 600px;
+            width: 90%;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+        h2 {
+            color: #38bdf8;
+            margin-top: 0;
+            font-size: 1.8rem;
+        }
+        p, .question-text {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            text-align: left;
+            margin-bottom: 20px;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            color: white;
+        }
+        .data-table th, .data-table td {
+            border: 1px solid #475569;
+            padding: 8px;
+            text-align: center;
+        }
+        .data-table th { background: rgba(56, 189, 248, 0.2); }
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .btn {
+            background: linear-gradient(135deg, #0284c7, #38bdf8);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(56, 189, 248, 0.4);
+        }
+        .btn-option {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-option:hover { background: rgba(56, 189, 248, 0.3); }
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            transform: translate(-50%, -50%);
+            border: 2px solid rgba(255,255,255,0.5);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 5;
+        }
+        .hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.6);
+            padding: 10px 20px;
+            border-radius: 10px;
+            color: #38bdf8;
+            font-weight: bold;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Heads Up Display -->
+    <div class="hud" id="score-display">Peti Ditemukan: 0 / 3</div>
+    <div id="crosshair"></div>
+
+    <!-- UI Overlay for Modals -->
+    <div id="ui-layer">
+        
+        <!-- Intro Modal -->
+        <div id="intro-modal" class="modal" style="display: block;">
+            <h2>Misi Penjelajah Waktu ⚓</h2>
+            <p style="text-align: center;">Selamat datang, Navigator! Untuk menemukan Harta Karun legendaris, Anda harus memecahkan 3 teka-teki Kinematika yang tersebar di pulau ini.</p>
+            <p style="text-align: center; font-size: 0.9rem; color: #cbd5e1;">Gunakan mouse/touch untuk melihat sekeliling. Arahkan kursor dan klik pada Peti Harta Karun yang bersinar.</p>
+            <button class="btn" onclick="closeModal('intro-modal')">Mulai Ekspedisi</button>
+        </div>
+
+        <!-- Tantangan 1: Jarak & Perpindahan -->
+        <div id="q1-modal" class="modal">
+            <h2>Pos 1: Peta Navigasi</h2>
+            <div class="question-text">
+                Kapal kita bergerak 4 km ke arah Timur, kemudian berbelok 3 km ke arah Utara untuk menghindari karang. Berdasarkan rute tersebut, berapakah <b>Jarak</b> dan <b>Perpindahan</b> kapal dari titik awal?
+            </div>
+            <div class="options">
+                <button class="btn-option" onclick="checkAnswer(1, false)">Jarak: 5 km, Perpindahan: 7 km</button>
+                <button class="btn-option" onclick="checkAnswer(1, true)">Jarak: 7 km, Perpindahan: 5 km</button>
+                <button class="btn-option" onclick="checkAnswer(1, false)">Jarak: 7 km, Perpindahan: 7 km</button>
+            </div>
+        </div>
+
+        <!-- Tantangan 2: Kelajuan vs Kecepatan Rata-rata -->
+        <div id="q2-modal" class="modal">
+            <h2>Pos 2: Log Perjalanan</h2>
+            <div class="question-text">
+                Perhatikan data perjalanan kapal pemantau berikut:
+                <table class="data-table">
+                    <tr><th>Waktu (s)</th><th>Posisi (m)</th></tr>
+                    <tr><td>0</td><td>0 (Dermaga)</td></tr>
+                    <tr><td>10</td><td>100 (Ke Timur)</td></tr>
+                    <tr><td>20</td><td>50 (Kembali ke Barat)</td></tr>
+                </table>
+                Berdasarkan tabel, berapakah <b>Kecepatan Rata-rata</b> kapal selama 20 detik pertama?
+            </div>
+            <div class="options">
+                <button class="btn-option" onclick="checkAnswer(2, false)">7,5 m/s</button>
+                <button class="btn-option" onclick="checkAnswer(2, false)">5,0 m/s</button>
+                <button class="btn-option" onclick="checkAnswer(2, true)">2,5 m/s</button>
+            </div>
+        </div>
+
+        <!-- Tantangan 3: Percepatan & Gerak Relatif -->
+        <div id="q3-modal" class="modal">
+            <h2>Pos 3: Kejaran Kapal Bajak Laut</h2>
+            <div class="question-text">
+                Kapal kita sedang melaju ke depan dengan kecepatan 15 m/s. Tiba-tiba, dari arah belakang, sebuah kapal bajak laut mengejar dengan kecepatan 25 m/s.<br><br>
+                Jika bajak laut tersebut mulai mempercepat kapalnya (percepatan 2 m/s²), berapakah <b>Kecepatan Relatif</b> bajak laut terhadap kapal kita tepat pada saat itu?
+            </div>
+            <div class="options">
+                <button class="btn-option" onclick="checkAnswer(3, false)">40 m/s</button>
+                <button class="btn-option" onclick="checkAnswer(3, true)">10 m/s mendekat</button>
+                <button class="btn-option" onclick="checkAnswer(3, false)">10 m/s menjauh</button>
+            </div>
+        </div>
+
+        <!-- Kemenangan -->
+        <div id="win-modal" class="modal">
+            <h2>Harta Karun Ditemukan! 🏆</h2>
+            <p style="text-align: center;">Luar Biasa! Anda telah membuktikan pemahaman mendalam mengenai analisis besaran gerak (Kinematika).</p>
+            <p style="text-align: center; font-size: 1.2rem;"><b>Gelar: Master Kinematika</b></p>
+            <button class="btn" onclick="location.reload()">Main Lagi</button>
+        </div>
+
+    </div>
+
+    <!-- 3D Scene -->
+    <a-scene cursor="rayOrigin: mouse" raycaster="objects: .clickable">
+        
+        <!-- Environment (Ocean/Island theme) -->
+        <a-entity environment="preset: contact; skyColor: #87CEEB; groundColor: #2E8B57; groundTexture: walkernoise"></a-entity>
+
+        <!-- Player Camera -->
+        <a-entity camera look-controls position="0 1.6 0"></a-entity>
+
+        <!-- Peti Harta Karun 1 -->
+        <a-entity id="chest1" class="clickable" position="-3 0.5 -4" rotation="0 45 0" 
+                  animation="property: position; to: -3 0.8 -4; dir: alternate; dur: 2000; loop: true">
+            <a-box color="#b45309" depth="0.8" height="0.6" width="1"></a-box>
+            <a-box color="#fcd34d" depth="0.85" height="0.1" width="1.05" position="0 0.3 0"></a-box>
+            <a-light type="point" color="#fcd34d" distance="3" intensity="2"></a-light>
+        </a-entity>
+
+        <!-- Peti Harta Karun 2 (Hidden initially) -->
+        <a-entity id="chest2" class="clickable" position="4 0.5 -3" rotation="0 -30 0" visible="false"
+                  animation="property: position; to: 4 0.8 -3; dir: alternate; dur: 2000; loop: true">
+            <a-box color="#b45309" depth="0.8" height="0.6" width="1"></a-box>
+            <a-box color="#fcd34d" depth="0.85" height="0.1" width="1.05" position="0 0.3 0"></a-box>
+            <a-light type="point" color="#fcd34d" distance="3" intensity="2"></a-light>
+        </a-entity>
+
+        <!-- Peti Harta Karun 3 (Hidden initially) -->
+        <a-entity id="chest3" class="clickable" position="0 0.5 -6" rotation="0 0 0" visible="false"
+                  animation="property: position; to: 0 0.8 -6; dir: alternate; dur: 2000; loop: true">
+            <a-box color="#b45309" depth="0.8" height="0.6" width="1"></a-box>
+            <a-box color="#fcd34d" depth="0.85" height="0.1" width="1.05" position="0 0.3 0"></a-box>
+            <a-light type="point" color="#38bdf8" distance="4" intensity="3"></a-light>
+        </a-entity>
+
+    </a-scene>
+
+    <script>
+        let currentChest = 1;
+
+        // Interaction Listeners
+        document.querySelector('#chest1').addEventListener('click', () => openModal('q1-modal'));
+        document.querySelector('#chest2').addEventListener('click', () => openModal('q2-modal'));
+        document.querySelector('#chest3').addEventListener('click', () => openModal('q3-modal'));
+
+        function openModal(id) {
+            document.getElementById(id).style.display = 'block';
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        function checkAnswer(questionNumber, isCorrect) {
+            if (isCorrect) {
+                alert("Jawaban Benar! Anda mendapatkan koordinat untuk peti selanjutnya.");
+                closeModal(`q${questionNumber}-modal`);
+                document.querySelector(`#chest${questionNumber}`).setAttribute('visible', 'false');
+                document.querySelector(`#chest${questionNumber}`).classList.remove('clickable');
+                
+                document.getElementById('score-display').innerText = `Peti Ditemukan: ${questionNumber} / 3`;
+
+                if (questionNumber < 3) {
+                    let nextChest = document.querySelector(`#chest${questionNumber + 1}`);
+                    nextChest.setAttribute('visible', 'true');
+                } else {
+                    setTimeout(() => openModal('win-modal'), 1000);
+                }
+            } else {
+                alert("Jawaban kurang tepat. Ingat konsep arah pada vektor kecepatan dan perpindahan! Coba lagi.");
+            }
+        }
+    </script>
+</body>
+</html>
