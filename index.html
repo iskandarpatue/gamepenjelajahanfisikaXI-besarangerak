@@ -3,31 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Teka-Teki Silang Fisika - SMAN 1 Batudaa Pantai</title>
+    <title>TTS Kinematika - SMAN 1 Batudaa Pantai</title>
     <style>
         :root {
-            /* Skema Warna 2D Modern & Elegan */
-            --bg-color: #0f172a; /* Biru Dongker Gelap (Latar Luar) */
+            --bg-color: #0f172a; /* Biru Dongker Gelap */
             --board-bg: #1e293b; /* Biru Dongker Papan */
             --primary: #0284c7;  /* Biru Utama */
             --primary-light: #38bdf8; /* Biru Muda */
             --text-light: #f8fafc;
-            --cell-bg: #ffffff; /* Putih */
+            --cell-bg: #ffffff;
             --cell-text: #0f172a;
             --cell-border: #94a3b8;
             --highlight-word: #bae6fd; /* Biru Muda Highlight Kata */
             --highlight-cell: #fde047; /* Kuning Terang Highlight Sel Aktif */
             --solved-bg: #a7f3d0; /* Hijau Sukses */
             
-            --cell-size: 40px;
+            --cell-size: 45px; /* Sedikit diperbesar agar mudah ditap di layar sentuh */
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            user-select: none; /* Mencegah seleksi teks saat layar disentuh */
-            -webkit-tap-highlight-color: transparent; /* Hilangkan blink biru di HP */
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
@@ -39,83 +38,43 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            touch-action: none; /* Serahkan semua kontrol sentuh ke JS */
         }
 
-        /* --- HEADER --- */
         header {
-            background-color: var(--primary);
+            background: rgba(2, 132, 199, 0.9);
+            backdrop-filter: blur(10px);
             padding: 15px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            z-index: 10;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            z-index: 20;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
         }
 
-        .header-title {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: white;
-        }
+        .header-title { font-size: 1.4rem; font-weight: bold; color: white; }
+        .header-score { font-size: 1.2rem; font-weight: bold; background: rgba(255,255,255,0.2); padding: 5px 15px; border-radius: 20px; }
 
-        .header-score {
-            font-size: 1.2rem;
-            font-weight: bold;
-            background: rgba(255,255,255,0.2);
-            padding: 5px 15px;
-            border-radius: 20px;
-        }
-
-        /* --- MAIN BOARD AREA --- */
+        /* BUG FIX: Scroll native yang super mulus tanpa blokir klik */
         main {
             flex: 1;
-            position: relative;
+            overflow: auto; /* Memungkinkan scroll native */
+            -webkit-overflow-scrolling: touch; /* Momentum scrolling di iOS/Touchscreen */
             background-color: var(--board-bg);
-            overflow: hidden;
-            cursor: grab;
-        }
-        main:active { cursor: grabbing; }
-
-        /* Kontrol Zoom */
-        #zoom-controls {
-            position: absolute;
-            right: 20px;
-            top: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            z-index: 5;
-        }
-        .zoom-btn {
-            width: 50px;
-            height: 50px;
-            background-color: var(--primary);
-            color: white;
-            font-size: 28px;
+            position: relative;
+            padding: 40px; /* Jarak aman di sekeliling papan */
             display: flex;
             justify-content: center;
             align-items: center;
-            border-radius: 12px;
-            cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            border: 2px solid rgba(255,255,255,0.2);
-        }
-        .zoom-btn:active { transform: scale(0.95); }
-
-        #pan-container {
-            position: absolute;
-            top: 0; left: 0;
-            transform-origin: 0 0; /* Transformasi dari pojok untuk kalkulasi akurat */
-            /* Transisi dihilangkan agar drag dengan mouse/touch terasa instan (tidak delay) */
         }
 
         #grid-board {
             position: relative;
-            /* Ukuran akan diset oleh JS berdasarkan 40x40 cell */
+            /* Lebar dan tinggi akan diset dinamis via JS */
+            background: rgba(255,255,255,0.02);
+            border-radius: 8px;
         }
 
-        /* --- CELLS --- */
         .cell {
             position: absolute;
             width: var(--cell-size);
@@ -126,110 +85,88 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 22px;
+            font-size: 24px;
             font-weight: bold;
             text-transform: uppercase;
             cursor: pointer;
-            transition: background-color 0.1s;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.1s ease;
         }
 
         .cell-number {
             position: absolute;
             top: 2px;
-            left: 3px;
-            font-size: 10px;
+            left: 4px;
+            font-size: 11px;
             color: #475569;
-            font-weight: normal;
+            font-weight: bold;
         }
 
-        /* States Sel */
+        /* Status Kotak (Aktif, Terselesaikan) */
         .cell.word-active { background-color: var(--highlight-word); border-color: var(--primary); }
-        .cell.cell-active { background-color: var(--highlight-cell); border-color: #ca8a04; box-shadow: inset 0 0 0 2px #ca8a04; z-index: 2; }
+        .cell.cell-active { 
+            background-color: var(--highlight-cell); 
+            border-color: #ca8a04; 
+            box-shadow: inset 0 0 0 3px #ca8a04; 
+            z-index: 5; 
+            transform: scale(1.05);
+        }
         .cell.solved { background-color: var(--solved-bg); border-color: #059669; color: #064e3b; }
         
-        /* --- BOTTOM PANEL --- */
         #bottom-panel {
-            background-color: #0f172a;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
             border-top: 2px solid var(--primary);
             padding: 15px 10px 20px 10px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            z-index: 10;
+            z-index: 20;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.5);
         }
 
         #active-clue-box {
             width: 100%;
             max-width: 900px;
-            background-color: #1e293b;
+            background: rgba(30, 41, 59, 0.8);
             border: 1px solid var(--primary-light);
             border-radius: 12px;
             padding: 15px;
             margin-bottom: 15px;
             text-align: center;
-            min-height: 70px;
+            min-height: 80px;
             display: flex;
             flex-direction: column;
             justify-content: center;
         }
 
-        #clue-direction {
-            font-size: 0.9rem;
-            color: var(--primary-light);
-            font-weight: bold;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-        }
+        #clue-direction { font-size: 0.9rem; color: var(--primary-light); font-weight: bold; margin-bottom: 5px; letter-spacing: 1px;}
+        #clue-text { font-size: 1.15rem; color: white; line-height: 1.4; }
 
-        #clue-text {
-            font-size: 1.1rem;
-            color: white;
-            line-height: 1.4;
-        }
-
-        /* --- KEYBOARD --- */
-        #keyboard {
-            width: 100%;
-            max-width: 900px;
-        }
-
-        .kb-row {
-            display: flex;
-            justify-content: center;
-            gap: 6px;
-            margin-bottom: 8px;
-        }
-
+        #keyboard { width: 100%; max-width: 900px; }
+        .kb-row { display: flex; justify-content: center; gap: 6px; margin-bottom: 8px; }
+        
         .kb-key {
-            background-color: #334155;
+            background: linear-gradient(180deg, #475569, #334155);
             color: white;
-            border: 1px solid #475569;
+            border: 1px solid #64748b;
             border-radius: 8px;
             padding: 15px 0;
             flex: 1;
-            max-width: 65px;
+            max-width: 70px;
             text-align: center;
             font-size: 1.3rem;
             font-weight: bold;
             cursor: pointer;
-            box-shadow: 0 4px 0 #1e293b;
+            box-shadow: 0 4px 0 #0f172a;
+            transition: transform 0.1s;
         }
         
-        .kb-key:active {
-            transform: translateY(4px);
-            box-shadow: 0 0 0 #1e293b;
-            background-color: var(--primary);
-        }
+        .kb-key:active { transform: translateY(4px); box-shadow: 0 0 0 #0f172a; background: var(--primary); border-color: var(--primary-light); }
+        .kb-key.action-key { max-width: 130px; background: linear-gradient(180deg, #ef4444, #dc2626); box-shadow: 0 4px 0 #7f1d1d; border-color: #fca5a5; font-size: 1.1rem; }
+        .kb-key.action-key:active { background: #b91c1c; box-shadow: 0 0 0 #7f1d1d; }
 
-        .kb-key.action-key {
-            max-width: 120px;
-            background-color: #dc2626; /* Merah untuk hapus */
-            box-shadow: 0 4px 0 #991b1b;
-            font-size: 1.1rem;
-        }
-        .kb-key.action-key:active { background-color: #ef4444; box-shadow: 0 0 0 #991b1b; }
-
-        /* Loading & Modals */
         .overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(15, 23, 42, 0.95);
@@ -242,49 +179,50 @@
             background: white; color: var(--cell-text);
             padding: 40px; border-radius: 20px; max-width: 500px; width: 90%;
             text-align: center; border: 4px solid var(--primary);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
         .btn {
             background-color: var(--primary); color: white; border: none;
             padding: 12px 25px; border-radius: 8px; font-size: 1.2rem; font-weight: bold;
-            margin-top: 20px; cursor: pointer;
+            margin-top: 20px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2);
         }
+        .btn:active { transform: translateY(2px); box-shadow: none; }
 
         @media (max-width: 768px) {
-            .header-title { font-size: 1.2rem; }
-            .kb-key { padding: 12px 0; font-size: 1.1rem; }
-            .kb-key.action-key { max-width: 80px; font-size: 0.9rem; }
+            .header-title { font-size: 1.1rem; }
+            .kb-key { padding: 12px 0; font-size: 1.2rem; }
+            .kb-key.action-key { font-size: 1rem; }
+            :root { --cell-size: 38px; }
         }
     </style>
 </head>
 <body>
 
+    <!-- Layar Loading -->
     <div id="loading" class="overlay show">
         <h2 style="color: var(--primary-light); margin-bottom: 20px;">Menyusun Papan TTS...</h2>
         <div style="width: 50px; height: 50px; border: 5px solid #334155; border-top: 5px solid var(--primary-light); border-radius: 50%; animation: spin 1s linear infinite;"></div>
         <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
     </div>
 
+    <!-- Header Informasi -->
     <header>
-        <div class="header-title">TTS Fisika - SMAN 1 Batudaa Pantai</div>
+        <div class="header-title">TTS Kinematika - SMAN 1 Batudaa Pantai</div>
         <div class="header-score">Selesai: <span id="score-display">0</span> / 35</div>
     </header>
 
-    <main id="board-area">
-        <div id="zoom-controls">
-            <div class="zoom-btn" onclick="adjustZoom(0.2)">+</div>
-            <div class="zoom-btn" onclick="adjustZoom(-0.2)">-</div>
-        </div>
-        <div id="pan-container">
-            <div id="grid-board">
-                <!-- Sel TTS akan di-generate oleh JavaScript di sini -->
-            </div>
+    <!-- Kontainer Papan Grid dengan Native Scroll -->
+    <main id="main-area">
+        <div id="grid-board">
+            <!-- Sel TTS akan dimuat oleh JavaScript -->
         </div>
     </main>
 
+    <!-- Panel Petunjuk dan Keyboard -->
     <div id="bottom-panel">
         <div id="active-clue-box">
             <div id="clue-direction">-</div>
-            <div id="clue-text">Silakan sentuh/klik salah satu kotak putih pada papan di atas untuk mulai bermain.</div>
+            <div id="clue-text">Ketuk salah satu kotak putih pada papan di atas untuk mulai menjawab. Anda dapat menggeser papan ke kiri/kanan/atas/bawah.</div>
         </div>
         
         <div id="keyboard">
@@ -301,191 +239,185 @@
         </div>
     </div>
 
+    <!-- Modal Kemenangan -->
     <div id="win-modal" class="overlay">
         <div class="modal-box">
-            <h1 style="color: #059669; font-size: 2.5rem; margin-bottom: 15px;">Luar Biasa! 🎉</h1>
-            <p style="font-size: 1.2rem; margin-bottom: 10px;">Semua misteri Fisika Kinematika telah terpecahkan.</p>
-            <p style="font-weight: bold; color: var(--primary);">Silakan lapor kepada Pak Guru Iskandar.</p>
+            <h1 style="color: #059669; font-size: 2.5rem; margin-bottom: 15px;">Misi Selesai! 🎉</h1>
+            <p style="font-size: 1.2rem; margin-bottom: 10px;">Anda telah menguasai seluruh konsep dasar Kinematika.</p>
+            <p style="font-weight: bold; color: var(--primary); font-size:1.1rem; padding: 15px; background:#f1f5f9; border-radius:8px;">Silakan lapor kepada Pak Guru Iskandar.</p>
             <button class="btn" onclick="location.reload()">Main Ulang</button>
         </div>
     </div>
 
     <script>
-        // 1. Data 35 Kata & Petunjuk (Sesuai Permintaan)
         const wordList = [
-            { w: 'KINEMATIKA', c: 'Ilmu gerak tanpa meninjau penyebabnya' },
-            { w: 'PERPINDAHAN', c: 'Perubahan posisi benda dari titik awal ke akhir' },
-            { w: 'KECEPATAN', c: 'Perpindahan yang ditempuh per satuan waktu' },
-            { w: 'PERCEPATAN', c: 'Perubahan kecepatan per satuan waktu' },
-            { w: 'GRAVITASI', c: 'Gaya tarik bumi yang mempengaruhi benda jatuh' },
-            { w: 'LINTASAN', c: 'Jalan atau lintasan yang dilalui benda bergerak' },
-            { w: 'DINAMIKA', c: 'Ilmu gerak yang meninjau gaya penyebabnya' },
-            { w: 'KELAJUAN', c: 'Jarak total dibagi dengan waktu total' },
-            { w: 'PARABOLA', c: 'Bentuk lintasan gerak peluru' },
-            { w: 'BATUDAA', c: 'Nama daerah SMAN 1 kita' },
-            { w: 'RATARATA', c: 'Nilai kecepatan dari total perpindahan dibagi total waktu' },
-            { w: 'GALILEO', c: 'Ilmuwan perumus konsep dasar kinematika awal' },
-            { w: 'SKALAR', c: 'Besaran yang hanya memiliki nilai tanpa arah' },
-            { w: 'VEKTOR', c: 'Besaran yang memiliki nilai dan arah' },
-            { w: 'RELATIF', c: 'Sifat gerak yang bergantung pada titik pengamat' },
-            { w: 'KONSTAN', c: 'Nilai kecepatan pada Gerak Lurus Beraturan (GLB)' },
-            { w: 'POSISI', c: 'Kedudukan suatu benda pada waktu tertentu' },
-            { w: 'GRAFIK', c: 'Representasi visual data gerak dalam bentuk kurva/garis' },
-            { w: 'SESAAT', c: 'Kecepatan yang terjadi pada waktu yang sangat singkat' },
-            { w: 'NEWTON', c: 'Ilmuwan bapak fisika klasik' },
-            { w: 'FISIKA', c: 'Ilmu sains yang sedang kita pelajari' },
-            { w: 'LINIER', c: 'Berupa garis lurus' },
-            { w: 'JARAK', c: 'Panjang lintasan total yang ditempuh benda' },
-            { w: 'ACUAN', c: 'Titik pangkal pengamatan gerak' },
-            { w: 'METER', c: 'Satuan Standar Internasional (SI) untuk jarak/perpindahan' },
-            { w: 'SEKON', c: 'Satuan Standar Internasional (SI) untuk waktu' },
-            { w: 'LURUS', c: 'Bentuk lintasan pada GLB dan GLBB' },
-            { w: 'JATUH', c: 'Gerak benda menuju pusat bumi' },
-            { w: 'BEBAS', c: 'Gerak jatuh tanpa kecepatan awal (GJB)' },
-            { w: 'WAKTU', c: 'Lama berlangsungnya suatu kejadian' },
-            { w: 'RUANG', c: 'Tempat terjadinya suatu peristiwa gerak' },
-            { w: 'AWAL', c: 'Kondisi kecepatan mula-mula benda' },
-            { w: 'AKHIR', c: 'Kondisi setelah benda bergerak' },
-            { w: 'DIAM', c: 'Kondisi benda dengan kecepatan nol' },
-            { w: 'ARAH', c: 'Atribut yang membedakan vektor dengan skalar' }
+            // MENDATAR (15)
+            { w: 'PERPINDAHAN', c: 'Jarak lurus dari posisi awal ke akhir', d: 'H' },
+            { w: 'JARAK', c: 'Panjang total lintasan yang ditempuh', d: 'H' },
+            { w: 'KELAJUAN', c: 'Jarak yang ditempuh dibagi waktu (skalar)', d: 'H' },
+            { w: 'KECEPATAN', c: 'Perpindahan dibagi selang waktu (vektor)', d: 'H' },
+            { w: 'PERCEPATAN', c: 'Perubahan kecepatan tiap satuan waktu', d: 'H' },
+            { w: 'WAKTU', c: 'Besaran skalar yang diukur dengan stopwatch', d: 'H' },
+            { w: 'POSISI', c: 'Letak suatu benda pada titik acuan tertentu', d: 'H' },
+            { w: 'VEKTOR', c: 'Besaran yang memiliki nilai dan arah', d: 'H' },
+            { w: 'SKALAR', c: 'Besaran yang hanya memiliki nilai', d: 'H' },
+            { w: 'LINTASAN', c: 'Titik-titik berurutan yang dilalui benda', d: 'H' },
+            { w: 'RELATIF', c: 'Gerak yang bergantung pada titik acuan', d: 'H' },
+            { w: 'GRAFIK', c: 'Visualisasi data posisi terhadap waktu pada sumbu koordinat', d: 'H' },
+            { w: 'GERAK', c: 'Perubahan posisi benda terhadap acuan', d: 'H' },
+            { w: 'PARABOLA', c: 'Bentuk lintasan peluru', d: 'H' },
+            { w: 'JATUHBEBAS', c: 'Gerak benda ke bawah akibat gravitasi tanpa kecepatan awal', d: 'H' },
+
+            // MENURUN (20)
+            { w: 'KINEMATIKA', c: 'Ilmu gerak tanpa memperhatikan penyebabnya', d: 'V' },
+            { w: 'DINAMIKA', c: 'Ilmu gerak yang memperhatikan gaya penyebabnya', d: 'V' },
+            { w: 'METER', c: 'Satuan SI untuk jarak dan perpindahan', d: 'V' },
+            { w: 'DETIK', c: 'Satuan SI untuk waktu', d: 'V' },
+            { w: 'KONSTAN', c: 'Nilai yang tidak berubah atau tetap', d: 'V' },
+            { w: 'RATA', c: 'Kecepatan total dibagi waktu total (Kecepatan ____-____ )', d: 'V' },
+            { w: 'SESAAT', c: 'Kecepatan pada waktu tertentu yang sangat singkat', d: 'V' },
+            { w: 'LURUS', c: 'Bentuk lintasan pada GLB dan GLBB', d: 'V' },
+            { w: 'GRAVITASI', c: 'Percepatan yang menarik benda ke pusat bumi', d: 'V' },
+            { w: 'VERTIKAL', c: 'Gerak lurus ke atas atau ke bawah', d: 'V' },
+            { w: 'HORIZONTAL', c: 'Arah gerak sejajar dengan sumbu x', d: 'V' },
+            { w: 'AWAL', c: 'Kecepatan sebelum benda mengalami percepatan', d: 'V' },
+            { w: 'AKHIR', c: 'Kecepatan setelah benda mengalami percepatan', d: 'V' },
+            { w: 'PERLAMBATAN', c: 'Percepatan yang bernilai negatif', d: 'V' },
+            { w: 'SUDUT', c: 'Besaran yang memengaruhi jarak terjauh pada gerak parabola', d: 'V' },
+            { w: 'PROYEKTIL', c: 'Benda yang diluncurkan ke udara', d: 'V' },
+            { w: 'MAKSIMUM', c: 'Titik tertinggi yang dicapai peluru', d: 'V' },
+            { w: 'MINIMUM', c: 'Nilai terendah', d: 'V' },
+            { w: 'DIAM', c: 'Kondisi benda saat kecepatannya nol', d: 'V' },
+            { w: 'ARAH', c: 'Sifat yang membedakan kecepatan dan kelajuan', d: 'V' }
         ];
 
-        // 2. Setup Grid TTS (40x40)
-        const GRID_SIZE = 40;
-        let grid = Array.from({length: GRID_SIZE}, () => Array(GRID_SIZE).fill(null));
-        let placedWords = []; // Menyimpan objek kata yang berhasil dipasang
+        const GRID_MAX = 70; // Kanvas besar untuk menampung banyak persilangan
+        let grid = Array.from({length: GRID_MAX}, () => Array(GRID_MAX).fill(null));
+        let placedWords = [];
+        let currentNum = 1;
 
-        // 3. Algoritma Generator TTS (Crossword Builder)
         function buildCrossword() {
-            // Urutkan kata dari yang terpanjang agar membentuk tulang punggung grid
+            // Sortir kata: dahulukan yang terpanjang agar menjadi tulang punggung grid
             let words = [...wordList].sort((a, b) => b.w.length - a.w.length);
             
             for (let i = 0; i < words.length; i++) {
                 let wordText = words[i].w;
                 let wordClue = words[i].c;
-                let isPlaced = false;
-
+                let prefDir = words[i].d;
+                
                 if (placedWords.length === 0) {
-                    // Kata pertama letakkan di tengah grid mendatar
-                    let startX = Math.floor(GRID_SIZE / 2) - Math.floor(wordText.length / 2);
-                    let startY = Math.floor(GRID_SIZE / 2);
-                    placeWordInGrid(wordText, wordClue, startX, startY, 'H');
-                    isPlaced = true;
+                    // Letakkan kata pertama tepat di tengah grid
+                    let sx = Math.floor(GRID_MAX / 2) - Math.floor(wordText.length / 2);
+                    let sy = Math.floor(GRID_MAX / 2);
+                    placeWord(wordText, wordClue, sx, sy, prefDir);
                 } else {
-                    // Cari semua kemungkinan persimpangan (intersection)
-                    let bestPlacement = findBestIntersection(wordText);
-                    
-                    if (bestPlacement) {
-                        placeWordInGrid(wordText, wordClue, bestPlacement.x, bestPlacement.y, bestPlacement.dir, bestPlacement.sharedLabel);
-                        isPlaced = true;
+                    let bestFit = findIntersection(wordText, prefDir);
+                    if (bestFit) {
+                        placeWord(wordText, wordClue, bestFit.x, bestFit.y, bestFit.dir, bestFit.sharedLabel);
                     } else {
-                        // Fallback: Jika tidak bisa bersinggungan, letakkan di tempat kosong
-                        let emptyPlace = findEmptySpace(wordText);
-                        if (emptyPlace) {
-                            placeWordInGrid(wordText, wordClue, emptyPlace.x, emptyPlace.y, emptyPlace.dir);
-                            isPlaced = true;
+                        // Jika tidak ada huruf bersilangan, letakkan berjejer di area bawah yang kosong
+                        let emptyFit = findEmptySpace(wordText, prefDir);
+                        if (emptyFit) {
+                            placeWord(wordText, wordClue, emptyFit.x, emptyFit.y, emptyFit.dir);
                         } else {
-                            console.warn("Grid Penuh, gagal menempatkan: " + wordText);
+                            console.warn("Gagal menempatkan:", wordText); // Pengaman fallback
                         }
                     }
                 }
             }
         }
 
-        function findBestIntersection(wordText) {
+        function findIntersection(wordText, prefDir) {
             let options = [];
-            
-            // Loop huruf demi huruf dalam kata yang akan dipasang
             for (let i = 0; i < wordText.length; i++) {
                 let char = wordText[i];
-                
-                // Cari huruf yang cocok di dalam grid
-                for (let y = 0; y < GRID_SIZE; y++) {
-                    for (let x = 0; x < GRID_SIZE; x++) {
+                for (let y = 0; y < GRID_MAX; y++) {
+                    for (let x = 0; x < GRID_MAX; x++) {
                         if (grid[y][x] && grid[y][x].char === char) {
-                            // Coba mendatar (H) -> huruf ini berada di index i, maka awal kata di x - i
-                            let hX = x - i;
-                            if (isValidPlacement(wordText, hX, y, 'H')) {
-                                let sharedNum = (i === 0) ? grid[y][x].numberLabel : null;
-                                options.push({ x: hX, y: y, dir: 'H', sharedLabel: sharedNum });
-                            }
-                            
-                            // Coba menurun (V) -> huruf ini berada di index i, maka awal kata di y - i
-                            let vY = y - i;
-                            if (isValidPlacement(wordText, x, vY, 'V')) {
-                                let sharedNum = (i === 0) ? grid[y][x].numberLabel : null;
-                                options.push({ x: x, y: vY, dir: 'V', sharedLabel: sharedNum });
+                            // Coba pasang sesuai preferred direction (Mendatar/Menurun)
+                            if (prefDir === 'H') {
+                                let hX = x - i;
+                                if (isValid(wordText, hX, y, 'H')) {
+                                    options.push({ x: hX, y: y, dir: 'H', sharedLabel: (i===0 ? grid[y][x].numLabel : null), score: getIntersectionsScore(wordText, hX, y, 'H') });
+                                }
+                            } else {
+                                let vY = y - i;
+                                if (isValid(wordText, x, vY, 'V')) {
+                                    options.push({ x: x, y: vY, dir: 'V', sharedLabel: (i===0 ? grid[y][x].numLabel : null), score: getIntersectionsScore(wordText, x, vY, 'V') });
+                                }
                             }
                         }
                     }
                 }
             }
-            return options.length > 0 ? options[0] : null; // Ambil opsi pertama yang valid
+            if (options.length > 0) {
+                // Pilih posisi yang memiliki persilangan paling banyak tanpa tabrakan
+                options.sort((a,b) => b.score - a.score);
+                return options[0];
+            }
+            return null;
         }
 
-        function findEmptySpace(wordText) {
-            // Coba scan area kosong
-            for (let y = 2; y < GRID_SIZE - wordText.length - 2; y++) {
-                for (let x = 2; x < GRID_SIZE - wordText.length - 2; x++) {
-                    if (isValidPlacement(wordText, x, y, 'H')) return { x, y, dir: 'H' };
-                    if (isValidPlacement(wordText, x, y, 'V')) return { x, y, dir: 'V' };
+        function findEmptySpace(wordText, dir) {
+            // Cari dari bawah ke atas agar kotak terpusat di tengah-bawah
+            for (let y = GRID_MAX - wordText.length - 2; y > 2; y -= 2) {
+                for (let x = 2; x < GRID_MAX - wordText.length - 2; x += 2) {
+                    if (isValid(wordText, x, y, dir)) return { x, y, dir };
                 }
             }
             return null;
         }
 
-        function isValidPlacement(text, startX, startY, dir) {
+        function isValid(text, startX, startY, dir) {
             let dx = dir === 'H' ? 1 : 0;
             let dy = dir === 'V' ? 1 : 0;
             
-            // Out of bounds check
-            if (startX < 0 || startY < 0 || startX + (text.length * dx) >= GRID_SIZE || startY + (text.length * dy) >= GRID_SIZE) {
-                return false;
-            }
+            if (startX < 0 || startY < 0 || startX + (text.length*dx) >= GRID_MAX || startY + (text.length*dy) >= GRID_MAX) return false;
 
             for (let i = 0; i < text.length; i++) {
                 let cx = startX + (i * dx);
                 let cy = startY + (i * dy);
                 let currentCell = grid[cy][cx];
 
-                // Jika sudah ada sel, hurufnya harus sama (Intersection)
+                // Jika sudah terisi, hurufnya harus persis sama
                 if (currentCell) {
                     if (currentCell.char !== text[i]) return false;
                 } else {
-                    // Jika sel kosong, pastikan KIRI-KANAN (untuk V) atau ATAS-BAWAH (untuk H) juga kosong
-                    // Mencegah dua kata paralel menempel menjadi kata yang salah
-                    let pX = dy; // tegak lurus
-                    let pY = dx;
+                    // Cek selang-seling (tetangga kiri-kanan / atas-bawah harus kosong untuk cegah kata bersatu)
+                    let pX = dy, pY = dx; 
                     if (grid[cy + pY] && grid[cy + pY][cx + pX] !== null) return false;
                     if (grid[cy - pY] && grid[cy - pY][cx - pX] !== null) return false;
                 }
             }
-
-            // Cek kotak SEBELUM huruf pertama dan SESUDAH huruf terakhir (mencegah kata bersambung)
+            // Mencegah kata menyambung di depan atau di belakang
             if (grid[startY - dy] && grid[startY - dy][startX - dx] !== null) return false;
-            let endX = startX + (text.length * dx);
-            let endY = startY + (text.length * dy);
+            let endX = startX + (text.length * dx), endY = startY + (text.length * dy);
             if (grid[endY] && grid[endY][endX] !== null) return false;
 
             return true;
         }
 
-        let currentNumberSequence = 1;
-        function placeWordInGrid(text, clue, x, y, dir, forceSharedLabel) {
+        function getIntersectionsScore(text, startX, startY, dir) {
+            let score = 0;
+            let dx = dir === 'H' ? 1 : 0;
+            let dy = dir === 'V' ? 1 : 0;
+            for (let i = 0; i < text.length; i++) {
+                if (grid[startY + (i*dy)][startX + (i*dx)] !== null) score++;
+            }
+            return score;
+        }
+
+        function placeWord(text, clue, x, y, dir, forceSharedLabel) {
             let dx = dir === 'H' ? 1 : 0;
             let dy = dir === 'V' ? 1 : 0;
             
-            let labelNum = forceSharedLabel || currentNumberSequence;
-            if (!forceSharedLabel) currentNumberSequence++;
+            let labelNum = forceSharedLabel || currentNum;
+            if (!forceSharedLabel) currentNum++;
 
-            let wordData = {
-                id: placedWords.length + 1,
-                answer: text,
-                clue: clue,
-                dir: dir,
-                num: labelNum,
-                cells: [],
-                isSolved: false
+            let wData = {
+                id: placedWords.length,
+                text: text, clue: clue, dir: dir, num: labelNum,
+                cells: [], solved: false
             };
 
             for (let i = 0; i < text.length; i++) {
@@ -494,32 +426,31 @@
                 
                 if (!grid[cy][cx]) {
                     grid[cy][cx] = {
-                        x: cx, y: cy,
-                        char: text[i],
-                        userChar: '',
-                        numberLabel: i === 0 ? labelNum : null,
-                        wordRefs: [],
-                        domEl: null
+                        x: cx, y: cy, char: text[i], userInput: '',
+                        numLabel: (i === 0 ? labelNum : null),
+                        words: [], el: null, textEl: null
                     };
-                } else if (i === 0 && !grid[cy][cx].numberLabel) {
-                    // Berjaga-jaga jika huruf pertama numpang di kata lain tapi belum ada nomor
-                    grid[cy][cx].numberLabel = labelNum;
+                } else if (i === 0 && !grid[cy][cx].numLabel) {
+                    grid[cy][cx].numLabel = labelNum;
                 }
                 
-                grid[cy][cx].wordRefs.push(wordData);
-                wordData.cells.push(grid[cy][cx]);
+                grid[cy][cx].words.push(wData);
+                wData.cells.push(grid[cy][cx]);
             }
-            placedWords.push(wordData);
+            placedWords.push(wData);
         }
 
         const boardEl = document.getElementById('grid-board');
-        const CELL_SIZE = 40; 
-        let minX = GRID_SIZE, maxX = 0, minY = GRID_SIZE, maxY = 0;
+        let cellSizeStyle;
 
         function renderDOM() {
-            // Cari batas terluar grid yang terisi untuk memotong ruang kosong
-            for (let y = 0; y < GRID_SIZE; y++) {
-                for (let x = 0; x < GRID_SIZE; x++) {
+            // Evaluasi ukuran sel dari CSS root
+            cellSizeStyle = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cell-size').trim());
+
+            // Cari batas terluar area yang terisi agar tidak terlalu banyak ruang kosong
+            let minX = GRID_MAX, maxX = 0, minY = GRID_MAX, maxY = 0;
+            for (let y = 0; y < GRID_MAX; y++) {
+                for (let x = 0; x < GRID_MAX; x++) {
                     if (grid[y][x]) {
                         minX = Math.min(minX, x); maxX = Math.max(maxX, x);
                         minY = Math.min(minY, y); maxY = Math.max(maxY, y);
@@ -528,286 +459,201 @@
             }
 
             // Margin ekstra
-            minX = Math.max(0, minX - 1); maxX = Math.min(GRID_SIZE - 1, maxX + 1);
-            minY = Math.max(0, minY - 1); maxY = Math.min(GRID_SIZE - 1, maxY + 1);
+            minX = Math.max(0, minX - 1); maxX = Math.min(GRID_MAX - 1, maxX + 1);
+            minY = Math.max(0, minY - 1); maxY = Math.min(GRID_MAX - 1, maxY + 1);
 
-            let boardWidth = (maxX - minX + 1) * CELL_SIZE;
-            let boardHeight = (maxY - minY + 1) * CELL_SIZE;
+            let bw = (maxX - minX + 1) * cellSizeStyle;
+            let bh = (maxY - minY + 1) * cellSizeStyle;
             
-            boardEl.style.width = boardWidth + 'px';
-            boardEl.style.height = boardHeight + 'px';
+            boardEl.style.width = bw + 'px';
+            boardEl.style.height = bh + 'px';
 
             for (let y = minY; y <= maxY; y++) {
                 for (let x = minX; x <= maxX; x++) {
-                    let cellData = grid[y][x];
-                    if (cellData) {
-                        let cellEl = document.createElement('div');
-                        cellEl.className = 'cell';
-                        // Posisi relatif terhadap bounding box yang baru
-                        cellEl.style.left = ((x - minX) * CELL_SIZE) + 'px';
-                        cellEl.style.top = ((y - minY) * CELL_SIZE) + 'px';
+                    let cData = grid[y][x];
+                    if (cData) {
+                        let cEl = document.createElement('div');
+                        cEl.className = 'cell';
+                        cEl.style.left = ((x - minX) * cellSizeStyle) + 'px';
+                        cEl.style.top = ((y - minY) * cellSizeStyle) + 'px';
                         
-                        if (cellData.numberLabel) {
-                            let num = document.createElement('span');
-                            num.className = 'cell-number';
-                            num.innerText = cellData.numberLabel;
-                            cellEl.appendChild(num);
+                        if (cData.numLabel) {
+                            let numEl = document.createElement('span');
+                            numEl.className = 'cell-number';
+                            numEl.innerText = cData.numLabel;
+                            cEl.appendChild(numEl);
                         }
 
-                        let textSpan = document.createElement('span');
-                        textSpan.className = 'cell-value';
-                        cellEl.appendChild(textSpan);
+                        let textEl = document.createElement('span');
+                        cEl.appendChild(textEl);
+                        
+                        // EVENT KLIK LANGSUNG DI ELEMEN CELL (Dijamin berfungsi karena tidak ada blokir drag)
+                        cEl.addEventListener('click', () => selectCell(cData));
 
-                        // Mendaftarkan klik
-                        // Menggunakan data atribut agar mousedown pada container bisa membedakan
-                        cellEl.dataset.cx = x;
-                        cellEl.dataset.cy = y;
-
-                        boardEl.appendChild(cellEl);
-                        cellData.domEl = cellEl;
-                        cellData.domText = textSpan;
+                        boardEl.appendChild(cEl);
+                        cData.el = cEl;
+                        cData.textEl = textEl;
                     }
                 }
             }
 
-            centerBoard(boardWidth, boardHeight);
             document.getElementById('loading').classList.remove('show');
+            
+            // Pusatkan scroll ke tengah papan secara perlahan
+            setTimeout(() => {
+                const mainArea = document.getElementById('main-area');
+                mainArea.scrollTop = (bh - mainArea.clientHeight) / 2;
+                mainArea.scrollLeft = (bw - mainArea.clientWidth) / 2;
+            }, 100);
         }
 
-        let activeWordObj = null;
-        let activeCellObj = null;
-        let score = 0;
+        let activeWord = null;
+        let activeCell = null;
+        let totalScore = 0;
 
-        function selectCell(x, y) {
-            let cell = grid[y][x];
-            if (!cell || (cell.wordRefs.every(w => w.isSolved))) return;
+        function selectCell(cData) {
+            // Jika sel berada di kata yang sudah terjawab semua, abaikan klik
+            if (cData.words.every(w => w.solved)) return;
 
-            // Bersihkan highlight lama
             clearHighlights();
 
-            let targetWord = cell.wordRefs[0];
+            let tWord = cData.words[0];
             
-            // Jika sel berada di persimpangan 2 kata (Mendatar & Menurun)
-            if (cell.wordRefs.length > 1) {
-                // Jika kata sebelumnya adalah kata pertama, toggle ke kata kedua, dan sebaliknya
-                if (activeWordObj === cell.wordRefs[0]) {
-                    targetWord = cell.wordRefs[1];
-                } else if (activeWordObj === cell.wordRefs[1] && activeCellObj === cell) {
-                    // Jika diklik di sel yang sama terus, toggle arah
-                    targetWord = cell.wordRefs[0];
-                } else if (!activeWordObj || activeWordObj !== cell.wordRefs[0]) {
-                    targetWord = cell.wordRefs[0];
+            // Logika persimpangan: ganti arah jika diklik lagi
+            if (cData.words.length > 1) {
+                if (activeWord === cData.words[0] && activeCell === cData) {
+                    tWord = cData.words[1]; // Toggle arah (mendatar -> menurun)
+                } else if (activeWord === cData.words[1] && activeCell === cData) {
+                    tWord = cData.words[0];
+                } else if (!activeWord || (activeWord !== cData.words[0] && activeWord !== cData.words[1])) {
+                    // Prioritaskan arah kata yang belum terjawab
+                    tWord = cData.words[0].solved ? cData.words[1] : cData.words[0];
+                } else {
+                    tWord = activeWord; // Tetap di arah yang sedang diketik
                 }
             }
 
-            // Jika kata yang dituju sudah selesai, cari kata cadangannya jika ada
-            if (targetWord.isSolved && cell.wordRefs.length > 1) {
-                targetWord = targetWord === cell.wordRefs[0] ? cell.wordRefs[1] : cell.wordRefs[0];
+            if (tWord.solved && cData.words.length > 1) {
+                tWord = (tWord === cData.words[0]) ? cData.words[1] : cData.words[0];
             }
-            if (targetWord.isSolved) return; // Keduanya sudah selesai
+            if (tWord.solved) return;
 
-            activeWordObj = targetWord;
-            activeCellObj = cell;
+            activeWord = tWord;
+            activeCell = cData;
 
-            // Update UI Highlight
-            activeWordObj.cells.forEach(c => {
-                if (!c.wordRefs.every(w=>w.isSolved)) c.domEl.classList.add('word-active');
+            // Warnai kotak yang se-kata
+            activeWord.cells.forEach(c => {
+                if (!c.words.every(w => w.solved)) c.el.classList.add('word-active');
             });
-            activeCellObj.domEl.classList.add('cell-active');
+            activeCell.el.classList.add('cell-active');
 
-            // Update Clue Panel
-            let dirText = targetWord.dir === 'H' ? 'MENDATAR' : 'MENURUN';
-            document.getElementById('clue-direction').innerText = `${targetWord.num} ${dirText}`;
-            document.getElementById('clue-text').innerText = targetWord.clue;
+            // Tampilkan petunjuk
+            let dText = activeWord.dir === 'H' ? 'MENDATAR' : 'MENURUN';
+            document.getElementById('clue-direction').innerText = `${activeWord.num}. ${dText}`;
+            document.getElementById('clue-text').innerText = activeWord.clue;
         }
 
         function clearHighlights() {
             document.querySelectorAll('.cell').forEach(el => {
-                el.classList.remove('word-active');
-                el.classList.remove('cell-active');
+                el.classList.remove('word-active', 'cell-active');
             });
         }
 
         function typeKey(letter) {
-            if (!activeCellObj || !activeWordObj || activeWordObj.isSolved) return;
+            if (!activeCell || !activeWord || activeWord.solved) return;
 
-            activeCellObj.userChar = letter;
-            activeCellObj.domText.innerText = letter;
+            activeCell.userInput = letter;
+            activeCell.textEl.innerText = letter;
 
-            // Cek kata
-            checkCurrentWord();
+            checkWinCondition();
 
-            // Pindah ke kotak selanjutnya otomatis jika belum selesai
-            if (!activeWordObj.isSolved) {
-                let currentIndex = activeWordObj.cells.indexOf(activeCellObj);
-                if (currentIndex < activeWordObj.cells.length - 1) {
-                    let nextCell = activeWordObj.cells[currentIndex + 1];
-                    // Skip sel yang sudah menjadi bagian kata terselesaikan dari persimpangan
-                    if (!nextCell.wordRefs.every(w => w.isSolved)) {
-                        activeCellObj.domEl.classList.remove('cell-active');
-                        activeCellObj = nextCell;
-                        activeCellObj.domEl.classList.add('cell-active');
+            // Pindah otomatis ke kotak berikutnya dalam 1 kata
+            if (!activeWord.solved) {
+                let idx = activeWord.cells.indexOf(activeCell);
+                if (idx < activeWord.cells.length - 1) {
+                    let nCell = activeWord.cells[idx + 1];
+                    // Loncat kotak jika kotak depannya sudah diselesaikan oleh persimpangan kata lain
+                    if (!nCell.words.every(w => w.solved)) {
+                        activeCell.el.classList.remove('cell-active');
+                        activeCell = nCell;
+                        activeCell.el.classList.add('cell-active');
+                        
+                        // Auto scroll ke sel yang baru aktif jika keluar dari viewport
+                        activeCell.el.scrollIntoView({behavior: "smooth", block: "center", inline: "center"});
                     }
                 }
             }
         }
 
         function deleteKey() {
-            if (!activeCellObj || !activeWordObj) return;
+            if (!activeCell || !activeWord) return;
 
-            let currentIndex = activeWordObj.cells.indexOf(activeCellObj);
+            let idx = activeWord.cells.indexOf(activeCell);
             
-            if (activeCellObj.userChar !== '') {
-                // Hapus isi sel saat ini
-                activeCellObj.userChar = '';
-                activeCellObj.domText.innerText = '';
-            } else if (currentIndex > 0) {
-                // Pindah mundur lalu hapus
-                activeCellObj.domEl.classList.remove('cell-active');
+            if (activeCell.userInput !== '') {
+                activeCell.userInput = '';
+                activeCell.textEl.innerText = '';
+            } else if (idx > 0) {
+                activeCell.el.classList.remove('cell-active');
                 
-                // Cari sel mundur terdekat yang belum "dikunci" karena persimpangan matang
-                let prevIndex = currentIndex - 1;
-                while (prevIndex >= 0 && activeWordObj.cells[prevIndex].wordRefs.some(w => w.isSolved && w !== activeWordObj)) {
-                    prevIndex--;
+                // Cari kotak mundur yang belum dikunci persimpangan
+                let pIdx = idx - 1;
+                while (pIdx >= 0 && activeWord.cells[pIdx].words.some(w => w.solved && w !== activeWord)) {
+                    pIdx--;
                 }
 
-                if (prevIndex >= 0) {
-                    activeCellObj = activeWordObj.cells[prevIndex];
-                    activeCellObj.userChar = '';
-                    activeCellObj.domText.innerText = '';
-                    activeCellObj.domEl.classList.add('cell-active');
+                if (pIdx >= 0) {
+                    activeCell = activeWord.cells[pIdx];
+                    activeCell.userInput = '';
+                    activeCell.textEl.innerText = '';
+                    activeCell.el.classList.add('cell-active');
                 } else {
-                     activeCellObj.domEl.classList.add('cell-active');
+                    activeCell.el.classList.add('cell-active');
                 }
             }
         }
 
-        function checkCurrentWord() {
-            // Verifikasi apakah semua huruf di activeWordObj cocok dengan kunci jawaban
+        function checkWinCondition() {
             let isCorrect = true;
-            for (let i = 0; i < activeWordObj.cells.length; i++) {
-                let c = activeWordObj.cells[i];
-                // Huruf user mungkin kosong atau salah. Tapi jika bagian persimpangan sudah diisi kata lain yg solved, ambil character aslinya
-                let checkChar = c.userChar;
-                if (c.userChar === '' && c.wordRefs.some(w => w.isSolved)) checkChar = c.char; 
+            for (let i = 0; i < activeWord.cells.length; i++) {
+                let c = activeWord.cells[i];
+                let val = c.userInput;
+                if (val === '' && c.words.some(w => w.solved)) val = c.char; 
 
-                if (checkChar !== c.char) {
+                if (val !== c.char) {
                     isCorrect = false;
                     break;
                 }
             }
 
             if (isCorrect) {
-                activeWordObj.isSolved = true;
-                score++;
-                document.getElementById('score-display').innerText = score;
+                activeWord.solved = true;
+                totalScore++;
+                document.getElementById('score-display').innerText = totalScore;
                 
-                // Warna Hijau
-                activeWordObj.cells.forEach(c => {
-                    c.domEl.classList.remove('word-active');
-                    c.domEl.classList.remove('cell-active');
-                    c.domEl.classList.add('solved');
-                    c.domText.innerText = c.char; // Paksa render huruf benar
+                activeWord.cells.forEach(c => {
+                    c.el.classList.remove('word-active', 'cell-active');
+                    c.el.classList.add('solved');
+                    c.textEl.innerText = c.char;
                 });
 
-                document.getElementById('clue-direction').innerText = "SELESAI";
-                document.getElementById('clue-text').innerText = "Kata tersebut telah terpecahkan. Pilih kotak lain.";
-                activeWordObj = null;
-                activeCellObj = null;
+                document.getElementById('clue-direction').innerText = "BENAR! ✓";
+                document.getElementById('clue-text').innerText = "Silakan pilih kotak/petunjuk yang lain.";
+                activeWord = null;
+                activeCell = null;
 
-                if (score === placedWords.length) {
-                    setTimeout(() => document.getElementById('win-modal').classList.add('show'), 500);
+                if (totalScore === placedWords.length) {
+                    setTimeout(() => document.getElementById('win-modal').classList.add('show'), 800);
                 }
             }
         }
 
-        const panContainer = document.getElementById('pan-container');
-        const mainArea = document.getElementById('board-area');
-        
-        let panX = 0, panY = 0, scale = 1;
-        let isDragging = false;
-        let startClientX, startClientY;
-        let startPanX, startPanY;
-        
-        function updateTransform() {
-            panContainer.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
-        }
-
-        function adjustZoom(delta) {
-            scale += delta;
-            if (scale < 0.4) scale = 0.4;
-            if (scale > 2.0) scale = 2.0;
-            updateTransform();
-        }
-
-        function centerBoard(bWidth, bHeight) {
-            let areaWidth = mainArea.clientWidth;
-            let areaHeight = mainArea.clientHeight;
-            
-            // Auto scale based on screen size (fit to screen logic, max scale 1)
-            scale = Math.min(1, areaWidth / (bWidth + 40), areaHeight / (bHeight + 40));
-            if (scale < 0.4) scale = 0.4;
-
-            panX = (areaWidth - (bWidth * scale)) / 2;
-            panY = (areaHeight - (bHeight * scale)) / 2;
-            updateTransform();
-        }
-
-        // Pointer Events merangkum Mouse dan Touch
-        mainArea.addEventListener('pointerdown', (e) => {
-            isDragging = false; // Reset status drag
-            startClientX = e.clientX;
-            startClientY = e.clientY;
-            startPanX = panX;
-            startPanY = panY;
-            mainArea.setPointerCapture(e.pointerId); // Kunci kursor ke container
-        });
-
-        mainArea.addEventListener('pointermove', (e) => {
-            if (e.buttons !== 1 && e.pointerType === 'mouse') return; // Hanya jalankan jika mouse diklik
-            if (startClientX === undefined) return;
-
-            let dx = e.clientX - startClientX;
-            let dy = e.clientY - startClientY;
-
-            // Jika pergeseran lebih dari 5 pixel, anggap ini drag (geser papan), bukan klik sel
-            if (Math.hypot(dx, dy) > 5) {
-                isDragging = true;
-                panX = startPanX + dx;
-                panY = startPanY + dy;
-                updateTransform();
-            }
-        });
-
-        mainArea.addEventListener('pointerup', (e) => {
-            mainArea.releasePointerCapture(e.pointerId);
-            
-            // Jika tidak sedang menggeser papan, berarti pengguna berniat "Klik/Tap"
-            if (!isDragging) {
-                let targetCell = e.target.closest('.cell');
-                if (targetCell) {
-                    let cx = parseInt(targetCell.dataset.cx);
-                    let cy = parseInt(targetCell.dataset.cy);
-                    selectCell(cx, cy);
-                } else {
-                    // Klik di area kosong membatalkan seleksi
-                    clearHighlights();
-                    activeWordObj = null;
-                    activeCellObj = null;
-                    document.getElementById('clue-direction').innerText = "-";
-                    document.getElementById('clue-text').innerText = "Silakan sentuh/klik salah satu kotak putih pada papan di atas untuk mulai bermain.";
-                }
-            }
-            startClientX = undefined;
-            isDragging = false;
-        });
-
+        // Jalankan Generator
         window.onload = () => {
-            // Beri sedikit jeda agar DOM ter-render baru jalankan algoritma berat
             setTimeout(() => {
                 buildCrossword();
                 renderDOM();
-            }, 500);
+            }, 500); // Sedikit jeda agar UI terender sebelum beban algoritma
         };
 
     </script>
